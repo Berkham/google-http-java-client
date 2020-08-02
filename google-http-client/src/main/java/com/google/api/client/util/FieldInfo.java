@@ -14,18 +14,21 @@
 
 package com.google.api.client.util;
 
+import com.google.common.base.Ascii;
 import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.Type;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.WeakHashMap;
 
 /**
  * Parses field information to determine data key name/value pair associated with the field.
  *
- * <p>
- * Implementation is thread-safe.
- * </p>
+ * <p>Implementation is thread-safe.
  *
  * @since 1.0
  * @author Yaniv Inbar
@@ -60,7 +63,7 @@ public class FieldInfo {
    *
    * @param field field or {@code null} for {@code null} result
    * @return field information or {@code null} if the field has no {@link #name} or for {@code null}
-   *         input
+   *     input
    */
   public static FieldInfo of(Field field) {
     if (field == null) {
@@ -112,14 +115,14 @@ public class FieldInfo {
   /** Field. */
   private final Field field;
 
+  private final Method[] setters;
+
   /**
    * Data key name associated with the field for a non-enum-constant with a {@link Key} annotation,
    * or data key value associated with the enum constant with a {@link Value} annotation or {@code
    * null} for an enum constant with a {@link NullValue} annotation.
    *
-   * <p>
-   * This string is interned.
-   * </p>
+   * <p>This string is interned.
    */
   private final String name;
 
@@ -127,6 +130,19 @@ public class FieldInfo {
     this.field = field;
     this.name = name == null ? null : name.intern();
     isPrimitive = Data.isPrimitive(getType());
+    this.setters = settersMethodForField(field);
+  }
+
+  /** Creates list of setter methods for a field only in declaring class. */
+  private Method[] settersMethodForField(Field field) {
+    List<Method> methods = new ArrayList<>();
+    for (Method method : field.getDeclaringClass().getDeclaredMethods()) {
+      if (Ascii.toLowerCase(method.getName()).equals("set" + Ascii.toLowerCase(field.getName()))
+          && method.getParameterTypes().length == 1) {
+        methods.add(method);
+      }
+    }
+    return methods.toArray(new Method[0]);
   }
 
   /**
@@ -143,9 +159,7 @@ public class FieldInfo {
    * annotation, or data key value associated with the enum constant with a {@link Value} annotation
    * or {@code null} for an enum constant with a {@link NullValue} annotation.
    *
-   * <p>
-   * This string is interned.
-   * </p>
+   * <p>This string is interned.
    *
    * @since 1.4
    */
@@ -190,19 +204,30 @@ public class FieldInfo {
     return isPrimitive;
   }
 
-  /**
-   * Returns the value of the field in the given object instance using reflection.
-   */
+  /** Returns the value of the field in the given object instance using reflection. */
   public Object getValue(Object obj) {
     return getFieldValue(field, obj);
   }
 
   /**
-   * Sets to the given value of the field in the given object instance using reflection.
-   * <p>
-   * If the field is final, it checks that value being set is identical to the existing value.
+   * Sets this field in the given object to the given value using reflection.
+   *
+   * <p>If the field is final, it checks that the value being set is identical to the existing
+   * value.
    */
   public void setValue(Object obj, Object value) {
+    if (setters.length > 0) {
+      for (Method method : setters) {
+        if (value == null || method.getParameterTypes()[0].isAssignableFrom(value.getClass())) {
+          try {
+            method.invoke(obj, value);
+            return;
+          } catch (IllegalAccessException | InvocationTargetException e) {
+            // try to set field directly
+          }
+        }
+      }
+    }
     setFieldValue(field, obj, value);
   }
 
@@ -216,9 +241,7 @@ public class FieldInfo {
     return Enum.valueOf((Class<T>) field.getDeclaringClass(), field.getName());
   }
 
-  /**
-   * Returns the value of the given field in the given object instance using reflection.
-   */
+  /** Returns the value of the given field in the given object using reflection. */
   public static Object getFieldValue(Field field, Object obj) {
     try {
       return field.get(obj);
@@ -228,17 +251,24 @@ public class FieldInfo {
   }
 
   /**
-   * Sets to the given value of the given field in the given object instance using reflection.
-   * <p>
-   * If the field is final, it checks that value being set is identical to the existing value.
+   * Sets the given field in the given object to the given value using reflection.
+   *
+   * <p>If the field is final, it checks that the value being set is identical to the existing
+   * value.
    */
   public static void setFieldValue(Field field, Object obj, Object value) {
     if (Modifier.isFinal(field.getModifiers())) {
       Object finalValue = getFieldValue(field, obj);
       if (value == null ? finalValue != null : !value.equals(finalValue)) {
         throw new IllegalArgumentException(
-            "expected final value <" + finalValue + "> but was <" + value + "> on "
-                + field.getName() + " field in " + obj.getClass().getName());
+            "expected final value <"
+                + finalValue
+                + "> but was <"
+                + value
+                + "> on "
+                + field.getName()
+                + " field in "
+                + obj.getClass().getName());
       }
     } else {
       try {

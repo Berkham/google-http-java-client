@@ -21,7 +21,8 @@ import com.google.api.client.util.FieldInfo;
 import com.google.api.client.util.GenericData;
 import com.google.api.client.util.Preconditions;
 import com.google.api.client.util.Types;
-
+import java.io.Closeable;
+import java.io.Flushable;
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.math.BigDecimal;
@@ -31,15 +32,13 @@ import java.util.Map;
 /**
  * Abstract low-level JSON serializer.
  *
- * <p>
- * Implementation has no fields and therefore thread-safe, but sub-classes are not necessarily
+ * <p>Implementation has no fields and therefore thread-safe, but sub-classes are not necessarily
  * thread-safe.
- * </p>
  *
  * @since 1.3
  * @author Yaniv Inbar
  */
-public abstract class JsonGenerator {
+public abstract class JsonGenerator implements Closeable, Flushable {
 
   /** Returns the JSON factory from which this generator was created. */
   public abstract JsonFactory getFactory();
@@ -139,7 +138,9 @@ public abstract class JsonGenerator {
       writeBoolean((Boolean) value);
     } else if (value instanceof DateTime) {
       writeString(((DateTime) value).toStringRfc3339());
-    } else if (value instanceof Iterable<?> || valueClass.isArray()) {
+    } else if ((value instanceof Iterable<?> || valueClass.isArray())
+        && !(value instanceof Map<?, ?>)
+        && !(value instanceof GenericData)) {
       writeStartArray();
       for (Object o : Types.iterableOf(value)) {
         serialize(isJsonString, o);
@@ -179,15 +180,11 @@ public abstract class JsonGenerator {
   /**
    * Requests that the output be pretty printed (by default it is not).
    *
-   * <p>
-   * Default implementation does nothing, but implementations may override to provide actual pretty
-   * printing.
-   * </p>
+   * <p>Default implementation does nothing, but implementations may override to provide actual
+   * pretty printing.
    *
    * @throws IOException possible I/O exception (unused in default implementation)
-   *
    * @since 1.6
    */
-  public void enablePrettyPrint() throws IOException {
-  }
+  public void enablePrettyPrint() throws IOException {}
 }

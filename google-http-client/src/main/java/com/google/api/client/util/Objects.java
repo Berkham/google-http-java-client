@@ -17,10 +17,6 @@ package com.google.api.client.util;
 /**
  * Helper functions that can operate on any {@code Object}.
  *
- * <p>
- * NOTE: proxy for the Guava implementation of {@link com.google.common.base.Objects}.
- * </p>
- *
  * @since 1.14
  * @author Yaniv Inbar
  */
@@ -30,16 +26,14 @@ public final class Objects {
    * Determines whether two possibly-null objects are equal. Returns:
    *
    * <ul>
-   * <li>{@code true} if {@code a} and {@code b} are both null.</li>
-   * <li>{@code true} if {@code a} and {@code b} are both non-null and they are equal according to
-   * {@link Object#equals(Object)}.</li>
-   * <li>{@code false} in all other situations.</li>
+   *   <li>{@code true} if {@code a} and {@code b} are both null.
+   *   <li>{@code true} if {@code a} and {@code b} are both non-null and they are equal according to
+   *       {@link Object#equals(Object)}.
+   *   <li>{@code false} in all other situations.
    * </ul>
    *
-   * <p>
-   * This assumes that any non-null objects passed to this function conform to the {@code equals()}
-   * contract.
-   * </p>
+   * <p>This assumes that any non-null objects passed to this function conform to the {@code
+   * equals()} contract.
    */
   public static boolean equal(Object a, Object b) {
     return com.google.common.base.Objects.equal(a, b);
@@ -48,57 +42,55 @@ public final class Objects {
   /**
    * Creates an instance of {@link ToStringHelper}.
    *
-   * <p>
-   * This is helpful for implementing {@link Object#toString()}. Specification by example:
-   * </p>
+   * <p>This is helpful for implementing {@link Object#toString()}. Specification by example:
    *
    * <pre>
-   // Returns "ClassName{}"
-   Objects.toStringHelper(this)
-       .toString();
-
-   // Returns "ClassName{x=1}"
-   Objects.toStringHelper(this)
-       .add("x", 1)
-       .toString();
-
-   // Returns "MyObject{x=1}"
-   Objects.toStringHelper("MyObject")
-       .add("x", 1)
-       .toString();
-
-   // Returns "ClassName{x=1, y=foo}"
-   Objects.toStringHelper(this)
-       .add("x", 1)
-       .add("y", "foo")
-       .toString();
-
-   // Returns "ClassName{x=1}"
-   Objects.toStringHelper(this)
-       .omitNullValues()
-       .add("x", 1)
-       .add("y", null)
-       .toString();
+   * // Returns "ClassName{}"
+   * Objects.toStringHelper(this)
+   * .toString();
+   *
+   * // Returns "ClassName{x=1}"
+   * Objects.toStringHelper(this)
+   * .add("x", 1)
+   * .toString();
+   *
+   * // Returns "MyObject{x=1}"
+   * Objects.toStringHelper("MyObject")
+   * .add("x", 1)
+   * .toString();
+   *
+   * // Returns "ClassName{x=1, y=foo}"
+   * Objects.toStringHelper(this)
+   * .add("x", 1)
+   * .add("y", "foo")
+   * .toString();
+   *
+   * // Returns "ClassName{x=1}"
+   * Objects.toStringHelper(this)
+   * .omitNullValues()
+   * .add("x", 1)
+   * .add("y", null)
+   * .toString();
    * </pre>
    *
    * @param self the object to generate the string for (typically {@code this}), used only for its
-   *        class name
+   *     class name
    */
   public static ToStringHelper toStringHelper(Object self) {
-    return new ToStringHelper(com.google.common.base.Objects.toStringHelper(self));
+    return new ToStringHelper(self.getClass().getSimpleName());
   }
 
+  // TODO(ejona): Swap to wrapping MoreObjects.ToStringHelper once depending on Guava 18.
   /** Support class for {@link Objects#toStringHelper}. */
   public static final class ToStringHelper {
+    private final String className;
+    private ValueHolder holderHead = new ValueHolder();
+    private ValueHolder holderTail = holderHead;
+    private boolean omitNullValues;
 
-    /** Wrapped object. */
-    private final com.google.common.base.Objects.ToStringHelper wrapped;
-
-    /**
-     * @param wrapped wrapped object
-     */
-    ToStringHelper(com.google.common.base.Objects.ToStringHelper wrapped) {
-      this.wrapped = wrapped;
+    /** @param className wrapped object */
+    ToStringHelper(String className) {
+      this.className = className;
     }
 
     /**
@@ -107,7 +99,7 @@ public final class Objects {
      * methods, is not significant.
      */
     public ToStringHelper omitNullValues() {
-      wrapped.omitNullValues();
+      omitNullValues = true;
       return this;
     }
 
@@ -117,16 +109,50 @@ public final class Objects {
      * called, in which case this name/value pair will not be added.
      */
     public ToStringHelper add(String name, Object value) {
-      wrapped.add(name, value);
-      return this;
+      return addHolder(name, value);
     }
 
     @Override
     public String toString() {
-      return wrapped.toString();
+      // create a copy to keep it consistent in case value changes
+      boolean omitNullValuesSnapshot = omitNullValues;
+      String nextSeparator = "";
+      StringBuilder builder = new StringBuilder(32).append(className).append('{');
+      for (ValueHolder valueHolder = holderHead.next;
+          valueHolder != null;
+          valueHolder = valueHolder.next) {
+        if (!omitNullValuesSnapshot || valueHolder.value != null) {
+          builder.append(nextSeparator);
+          nextSeparator = ", ";
+
+          if (valueHolder.name != null) {
+            builder.append(valueHolder.name).append('=');
+          }
+          builder.append(valueHolder.value);
+        }
+      }
+      return builder.append('}').toString();
+    }
+
+    private ValueHolder addHolder() {
+      ValueHolder valueHolder = new ValueHolder();
+      holderTail = holderTail.next = valueHolder;
+      return valueHolder;
+    }
+
+    private ToStringHelper addHolder(String name, Object value) {
+      ValueHolder valueHolder = addHolder();
+      valueHolder.value = value;
+      valueHolder.name = Preconditions.checkNotNull(name);
+      return this;
+    }
+
+    private static final class ValueHolder {
+      String name;
+      Object value;
+      ValueHolder next;
     }
   }
 
-  private Objects() {
-  }
+  private Objects() {}
 }

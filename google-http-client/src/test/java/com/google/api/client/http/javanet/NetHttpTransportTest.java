@@ -18,14 +18,12 @@ import com.google.api.client.testing.http.HttpTesting;
 import com.google.api.client.testing.http.javanet.MockHttpURLConnection;
 import com.google.api.client.util.ByteArrayStreamingContent;
 import com.google.api.client.util.StringUtils;
-
-import junit.framework.TestCase;
-
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import junit.framework.TestCase;
 
 /**
  * Tests {@link NetHttpTransport}.
@@ -34,8 +32,9 @@ import java.net.URL;
  */
 public class NetHttpTransportTest extends TestCase {
 
-  private static final String[] METHODS =
-      {"GET", "POST", "HEAD", "OPTIONS", "PUT", "DELETE", "TRACE"};
+  private static final String[] METHODS = {
+    "GET", "POST", "HEAD", "OPTIONS", "PUT", "DELETE", "TRACE"
+  };
 
   public void testExecute_mock() throws Exception {
     for (String method : METHODS) {
@@ -61,32 +60,30 @@ public class NetHttpTransportTest extends TestCase {
     }
   }
 
-
   public void testExecute_methodUnchanged() throws Exception {
+    String body = "Arbitrary body";
+    byte[] buf = StringUtils.getBytesUtf8(body);
     for (String method : METHODS) {
       HttpURLConnection connection =
-          (HttpURLConnection) new URL("http://www.google.com").openConnection();
+          new MockHttpURLConnection(new URL(HttpTesting.SIMPLE_URL))
+              .setResponseCode(200)
+              .setInputStream(new ByteArrayInputStream(buf));
       connection.setRequestMethod(method);
       NetHttpRequest request = new NetHttpRequest(connection);
       setContent(request, "text/html", "");
-      try {
-        request.execute().getContent().close();
-      } catch (IOException e) {
-        // expected when not connected to network
-      }
+      request.execute().getContent().close();
       assertEquals(method, connection.getRequestMethod());
     }
   }
 
   public void testAbruptTerminationIsNoticedWithContentLength() throws Exception {
-    String incompleteBody = ""
-        + "Fixed size body test.\r\n"
-        + "Incomplete response.";
+    String incompleteBody = "" + "Fixed size body test.\r\n" + "Incomplete response.";
     byte[] buf = StringUtils.getBytesUtf8(incompleteBody);
-    MockHttpURLConnection connection = new MockHttpURLConnection(new URL(HttpTesting.SIMPLE_URL))
-        .setResponseCode(200)
-        .addHeader("Content-Length", "205")
-        .setInputStream(new ByteArrayInputStream(buf));
+    MockHttpURLConnection connection =
+        new MockHttpURLConnection(new URL(HttpTesting.SIMPLE_URL))
+            .setResponseCode(200)
+            .addHeader("Content-Length", "205")
+            .setInputStream(new ByteArrayInputStream(buf));
     connection.setRequestMethod("GET");
     NetHttpRequest request = new NetHttpRequest(connection);
     setContent(request, null, "");
@@ -105,14 +102,13 @@ public class NetHttpTransportTest extends TestCase {
   }
 
   public void testAbruptTerminationIsNoticedWithContentLengthWithReadToBuf() throws Exception {
-    String incompleteBody = ""
-        + "Fixed size body test.\r\n"
-        + "Incomplete response.";
+    String incompleteBody = "" + "Fixed size body test.\r\n" + "Incomplete response.";
     byte[] buf = StringUtils.getBytesUtf8(incompleteBody);
-    MockHttpURLConnection connection = new MockHttpURLConnection(new URL(HttpTesting.SIMPLE_URL))
-        .setResponseCode(200)
-        .addHeader("Content-Length", "205")
-        .setInputStream(new ByteArrayInputStream(buf));
+    MockHttpURLConnection connection =
+        new MockHttpURLConnection(new URL(HttpTesting.SIMPLE_URL))
+            .setResponseCode(200)
+            .addHeader("Content-Length", "205")
+            .setInputStream(new ByteArrayInputStream(buf));
     connection.setRequestMethod("GET");
     NetHttpRequest request = new NetHttpRequest(connection);
     setContent(request, null, "");

@@ -16,16 +16,12 @@ package com.google.api.client.http.apache;
 
 import com.google.api.client.util.Preconditions;
 import com.google.api.client.util.StreamingContent;
-
-import org.apache.http.entity.AbstractHttpEntity;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import org.apache.http.entity.AbstractHttpEntity;
 
-/**
- * @author Yaniv Inbar
- */
+/** @author Yaniv Inbar */
 final class ContentEntity extends AbstractHttpEntity {
 
   /** Content length or less than zero if not known. */
@@ -43,22 +39,27 @@ final class ContentEntity extends AbstractHttpEntity {
     this.streamingContent = Preconditions.checkNotNull(streamingContent);
   }
 
+  @Override
   public InputStream getContent() {
     throw new UnsupportedOperationException();
   }
 
+  @Override
   public long getContentLength() {
     return contentLength;
   }
 
+  @Override
   public boolean isRepeatable() {
     return false;
   }
 
+  @Override
   public boolean isStreaming() {
     return true;
   }
 
+  @Override
   public void writeTo(OutputStream out) throws IOException {
     if (contentLength != 0) {
       streamingContent.writeTo(out);

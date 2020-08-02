@@ -15,10 +15,6 @@
 package com.google.api.client.http;
 
 import com.google.api.client.util.Key;
-
-import junit.framework.TestCase;
-import org.junit.Assert;
-
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -28,6 +24,8 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
+import junit.framework.TestCase;
+import org.junit.Assert;
 
 /**
  * Tests {@link GenericUrl}.
@@ -36,8 +34,7 @@ import java.util.List;
  */
 public class GenericUrlTest extends TestCase {
 
-  public GenericUrlTest() {
-  }
+  public GenericUrlTest() {}
 
   public GenericUrlTest(String name) {
     super(name);
@@ -144,24 +141,30 @@ public class GenericUrlTest extends TestCase {
   }
 
   public static class TestUrl extends GenericUrl {
-    @Key
-    String foo;
+    @Key String foo;
 
     public String hidden;
 
-    public TestUrl() {
-    }
+    public TestUrl() {}
 
     public TestUrl(String encodedUrl) {
       super(encodedUrl);
+    }
+
+    public TestUrl(String encodedUrl, boolean verbatim) {
+      super(encodedUrl, verbatim);
     }
   }
 
   private static final String FULL =
       "https://user:%3Cpa&$w%40rd%3E@www.google.com:223/m8/feeds/contacts/"
-      + "someone=%23%25&%20%3F%3Co%3E%7B%7D@gmail.com/"
-      + "full?" + "foo=bar&" + "alt=json&" + "max-results=3&" + "prettyprint=true&"
-      + "q=Go%3D%23/%25%26%20?%3Co%3Egle#%3CD@WNL:ADING%3E";
+          + "someone=%23%25&%20%3F%3Co%3E%7B%7D@gmail.com/"
+          + "full?"
+          + "foo=bar&"
+          + "alt=json&"
+          + "max-results=3&"
+          + "prettyprint=true&"
+          + "q=Go%3D%23/%25%26%20?%3Co%3Egle#%3CD@WNL:ADING%3E";
 
   private static final List<String> FULL_PARTS =
       Arrays.asList("", "m8", "feeds", "contacts", "someone=#%& ?<o>{}@gmail.com", "full");
@@ -176,7 +179,9 @@ public class GenericUrlTest extends TestCase {
     url.setPort(223);
     url.setPathParts(FULL_PARTS);
     url.set("alt", "json")
-        .set("max-results", 3).set("prettyprint", true).set("q", "Go=#/%& ?<o>gle");
+        .set("max-results", 3)
+        .set("prettyprint", true)
+        .set("q", "Go=#/%& ?<o>gle");
     url.foo = "bar";
     url.hidden = "invisible";
     url.setFragment(FRAGMENT);
@@ -190,6 +195,12 @@ public class GenericUrlTest extends TestCase {
     assertNull(url.hidden);
     assertEquals("bar", url.get("foo"));
     assertEquals("bar", url.foo);
+  }
+
+  public void testParse_full_verbatim() {
+    TestUrl url = new TestUrl(FULL, true);
+    assertNull(url.hidden);
+    assertEquals("Go%3D%23/%25%26%20?%3Co%3Egle", url.getFirst("q"));
   }
 
   public void testConstructor_url() throws MalformedURLException {
@@ -232,31 +243,23 @@ public class GenericUrlTest extends TestCase {
 
   public static class FieldTypesUrl extends GenericUrl {
 
-    @Key
-    Boolean B;
+    @Key Boolean B;
 
-    @Key
-    Double D;
+    @Key Double D;
 
-    @Key
-    Integer I;
+    @Key Integer I;
 
-    @Key
-    boolean b;
+    @Key boolean b;
 
-    @Key
-    double d;
+    @Key double d;
 
-    @Key
-    int i;
+    @Key int i;
 
-    @Key
-    String s;
+    @Key String s;
 
     String hidden;
 
-    FieldTypesUrl() {
-    }
+    FieldTypesUrl() {}
 
     FieldTypesUrl(String encodedUrl) {
       super(encodedUrl);
@@ -477,10 +480,12 @@ public class GenericUrlTest extends TestCase {
     subtestToPathParts("/path/to/resource", "", "path", "to", "resource");
     subtestToPathParts("/path/to/resource/", "", "path", "to", "resource", "");
     subtestToPathParts("/Go%3D%23%2F%25%26%20?%3Co%3Egle/2nd", "", "Go=#/%& ?<o>gle", "2nd");
+    subtestToPathParts("/plus+test/resource", "", "plus+test", "resource");
+    subtestToPathParts("/plus%2Btest/resource", "", "plus+test", "resource");
   }
 
   private void subtestToPathParts(String encodedPath, String... expectedDecodedParts) {
-    List<String> result = GenericUrl.toPathParts(encodedPath);
+    List<String> result = GenericUrl.toPathParts(encodedPath, false);
     if (encodedPath == null) {
       assertNull(result);
     } else {

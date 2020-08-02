@@ -16,11 +16,9 @@ package com.google.api.client.util;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
-
-import junit.framework.TestCase;
-
 import java.util.Iterator;
 import java.util.Map;
+import junit.framework.TestCase;
 
 /**
  * Tests {@link DataMap}.
@@ -29,12 +27,9 @@ import java.util.Map;
  */
 public class DataMapTest extends TestCase {
   static class A {
-    @Key
-    String r;
-    @Key
-    String s;
-    @Key
-    String t;
+    @Key String r;
+    @Key String s;
+    @Key String t;
   }
 
   public void testSizeAndIsEmpty() {

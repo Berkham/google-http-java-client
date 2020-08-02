@@ -4,11 +4,13 @@
   <parent>
     <groupId>com.google.http-client</groupId>
     <artifactId>google-http-client-parent</artifactId>
-    <version>1.20.0</version>
+    <version>1.36.1-SNAPSHOT</version><!-- {x-version-update:google-http-client-parent:current} -->
     <relativePath>../pom.xml</relativePath>
   </parent>
   <artifactId>google-http-client-findbugs</artifactId>
+  <version>1.36.1-SNAPSHOT</version><!-- {x-version-update:google-http-client-findbugs:current} -->
   <name>Google APIs Client Library Findbugs custom plugin.</name>
+
   <build>
     <plugins>
       <plugin>
@@ -23,8 +25,6 @@
           </execution>
         </executions>
       </plugin>
-      <!--The animal-sniffer plugin crashes on FindBugs on the icu4j:2.6.1
-          dependency-->
       <plugin>
          <groupId>org.codehaus.mojo</groupId>
          <artifactId>animal-sniffer-maven-plugin</artifactId>
@@ -32,17 +32,31 @@
            <skip>true</skip>
          </configuration>
       </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-dependency-plugin</artifactId>
+        <configuration>
+          <!-- This is needed for Javadoc linking, but is not used in the compiled bytecode -->
+          <ignoredUnusedDeclaredDependencies>com.google.http-client:google-http-client</ignoredUnusedDeclaredDependencies>
+        </configuration>
+      </plugin>
+      <plugin>
+        <artifactId>maven-jar-plugin</artifactId>
+        <configuration>
+          <archive>  
+            <manifestEntries>
+              <Automatic-Module-Name>com.google.api.client.findbugs</Automatic-Module-Name>
+            </manifestEntries>
+          </archive> 
+        </configuration>
+      </plugin> 
     </plugins>
   </build>
   <dependencies>
     <dependency>
-      <groupId>com.google.http-client</groupId>
-      <artifactId>google-http-client</artifactId>
-    </dependency>
-    <dependency>
       <groupId>com.google.code.findbugs</groupId>
       <artifactId>findbugs</artifactId>
-      <version>2.0.0</version>
+      <version>3.0.1</version>
       <exclusions>
         <exclusion>
           <artifactId>xalan</artifactId>
@@ -57,6 +71,15 @@
           <groupId>com.google.code.findbugs</groupId>
         </exclusion>
       </exclusions>
+    </dependency>
+    <dependency>
+      <groupId>com.google.code.findbugs</groupId>
+      <artifactId>bcel-findbugs</artifactId>
+      <version>6.0</version>
+    </dependency>
+    <dependency>
+      <groupId>com.google.http-client</groupId>
+      <artifactId>google-http-client</artifactId>
     </dependency>
   </dependencies>
 </project>

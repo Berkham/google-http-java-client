@@ -20,19 +20,15 @@ import com.google.api.client.util.Beta;
 import com.google.api.client.util.Preconditions;
 import com.google.api.client.xml.Xml;
 import com.google.api.client.xml.XmlNamespaceDictionary;
-
-import org.xmlpull.v1.XmlSerializer;
-
 import java.io.IOException;
 import java.io.OutputStream;
+import org.xmlpull.v1.XmlSerializer;
 
 /**
- * {@link Beta} <br/>
+ * {@link Beta} <br>
  * Abstract serializer for XML HTTP content based on the data key/value mapping object for an item.
  *
- * <p>
- * Implementation is not thread-safe.
- * </p>
+ * <p>Implementation is not thread-safe.
  *
  * @since 1.0
  * @author Yaniv Inbar

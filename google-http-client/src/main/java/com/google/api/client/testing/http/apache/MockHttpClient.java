@@ -16,7 +16,7 @@ package com.google.api.client.testing.http.apache;
 
 import com.google.api.client.util.Beta;
 import com.google.api.client.util.Preconditions;
-
+import java.io.IOException;
 import org.apache.http.ConnectionReuseStrategy;
 import org.apache.http.HttpException;
 import org.apache.http.HttpHost;
@@ -39,15 +39,11 @@ import org.apache.http.protocol.HttpContext;
 import org.apache.http.protocol.HttpProcessor;
 import org.apache.http.protocol.HttpRequestExecutor;
 
-import java.io.IOException;
-
 /**
- * {@link Beta} <br/>
+ * {@link Beta} <br>
  * Mock for {@link HttpClient} that does not actually make any network calls.
  *
- * <p>
- * Implementation is not thread-safe.
- * </p>
+ * <p>Implementation is not thread-safe.
  *
  * @since 1.14
  * @author Yaniv Inbar
@@ -59,12 +55,19 @@ public class MockHttpClient extends DefaultHttpClient {
   int responseCode;
 
   @Override
-  protected RequestDirector createClientRequestDirector(HttpRequestExecutor requestExec,
-      ClientConnectionManager conman, ConnectionReuseStrategy reustrat,
-      ConnectionKeepAliveStrategy kastrat, HttpRoutePlanner rouplan, HttpProcessor httpProcessor,
-      HttpRequestRetryHandler retryHandler, RedirectHandler redirectHandler,
-      AuthenticationHandler targetAuthHandler, AuthenticationHandler proxyAuthHandler,
-      UserTokenHandler stateHandler, HttpParams params) {
+  protected RequestDirector createClientRequestDirector(
+      HttpRequestExecutor requestExec,
+      ClientConnectionManager conman,
+      ConnectionReuseStrategy reustrat,
+      ConnectionKeepAliveStrategy kastrat,
+      HttpRoutePlanner rouplan,
+      HttpProcessor httpProcessor,
+      HttpRequestRetryHandler retryHandler,
+      RedirectHandler redirectHandler,
+      AuthenticationHandler targetAuthHandler,
+      AuthenticationHandler proxyAuthHandler,
+      UserTokenHandler stateHandler,
+      HttpParams params) {
     return new RequestDirector() {
       @Beta
       public HttpResponse execute(HttpHost target, HttpRequest request, HttpContext context)

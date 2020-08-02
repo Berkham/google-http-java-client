@@ -17,29 +17,41 @@ package com.google.api.client.http.javanet;
 import com.google.api.client.http.LowLevelHttpRequest;
 import com.google.api.client.http.LowLevelHttpResponse;
 import com.google.api.client.util.Preconditions;
-
+import com.google.api.client.util.StreamingContent;
+import com.google.common.annotations.VisibleForTesting;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.FutureTask;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
-/**
- * @author Yaniv Inbar
- */
+/** @author Yaniv Inbar */
 final class NetHttpRequest extends LowLevelHttpRequest {
 
   private final HttpURLConnection connection;
+  private int writeTimeout;
 
-  /**
-   * @param connection HTTP URL connection
-   */
+  /** @param connection HTTP URL connection */
   NetHttpRequest(HttpURLConnection connection) {
     this.connection = connection;
+    this.writeTimeout = 0;
     connection.setInstanceFollowRedirects(false);
   }
 
   @Override
   public void addHeader(String name, String value) {
     connection.addRequestProperty(name, value);
+  }
+
+  @VisibleForTesting
+  String getRequestProperty(String name) {
+    return connection.getRequestProperty(name);
   }
 
   @Override
@@ -49,7 +61,31 @@ final class NetHttpRequest extends LowLevelHttpRequest {
   }
 
   @Override
+  public void setWriteTimeout(int writeTimeout) throws IOException {
+    this.writeTimeout = writeTimeout;
+  }
+
+  interface OutputWriter {
+    void write(OutputStream outputStream, StreamingContent content) throws IOException;
+  }
+
+  static class DefaultOutputWriter implements OutputWriter {
+    @Override
+    public void write(OutputStream outputStream, final StreamingContent content)
+        throws IOException {
+      content.writeTo(outputStream);
+    }
+  }
+
+  private static final OutputWriter DEFAULT_CONNECTION_WRITER = new DefaultOutputWriter();
+
+  @Override
   public LowLevelHttpResponse execute() throws IOException {
+    return execute(DEFAULT_CONNECTION_WRITER);
+  }
+
+  @VisibleForTesting
+  LowLevelHttpResponse execute(final OutputWriter outputWriter) throws IOException {
     HttpURLConnection connection = this.connection;
     // write content
     if (getStreamingContent() != null) {
@@ -63,7 +99,7 @@ final class NetHttpRequest extends LowLevelHttpRequest {
       }
       long contentLength = getContentLength();
       if (contentLength >= 0) {
-        addHeader("Content-Length", Long.toString(contentLength));
+        connection.setRequestProperty("Content-Length", Long.toString(contentLength));
       }
       String requestMethod = connection.getRequestMethod();
       if ("POST".equals(requestMethod) || "PUT".equals(requestMethod)) {
@@ -74,11 +110,30 @@ final class NetHttpRequest extends LowLevelHttpRequest {
         } else {
           connection.setChunkedStreamingMode(0);
         }
-        OutputStream out = connection.getOutputStream();
+        final OutputStream out = connection.getOutputStream();
+
+        boolean threw = true;
         try {
-          getStreamingContent().writeTo(out);
+          writeContentToOutputStream(outputWriter, out);
+
+          threw = false;
+        } catch (IOException e) {
+          // If we've gotten a response back, continue on and try to parse the response. Otherwise,
+          // re-throw the IOException
+          if (!hasResponse(connection)) {
+            throw e;
+          }
         } finally {
-          out.close();
+          try {
+            out.close();
+          } catch (IOException exception) {
+            // When writeTo() throws an exception, chances are that the close call will also fail.
+            // In such case, swallow exception from close call so that the underlying cause can
+            // propagate.
+            if (!threw) {
+              throw exception;
+            }
+          }
         }
       } else {
         // cannot call setDoOutput(true) because it would change a GET method to POST
@@ -97,6 +152,50 @@ final class NetHttpRequest extends LowLevelHttpRequest {
     } finally {
       if (!successfulConnection) {
         connection.disconnect();
+      }
+    }
+  }
+
+  private boolean hasResponse(HttpURLConnection connection) {
+    try {
+      return connection.getResponseCode() > 0;
+    } catch (IOException e) {
+      // There's some exception trying to parse the response
+      return false;
+    }
+  }
+
+  private void writeContentToOutputStream(final OutputWriter outputWriter, final OutputStream out)
+      throws IOException {
+    if (writeTimeout == 0) {
+      outputWriter.write(out, getStreamingContent());
+    } else {
+      // do it with timeout
+      final StreamingContent content = getStreamingContent();
+      final Callable<Boolean> writeContent =
+          new Callable<Boolean>() {
+            @Override
+            public Boolean call() throws IOException {
+              outputWriter.write(out, content);
+              return Boolean.TRUE;
+            }
+          };
+
+      final ExecutorService executor = Executors.newSingleThreadExecutor();
+      final Future<Boolean> future = executor.submit(new FutureTask<Boolean>(writeContent), null);
+      executor.shutdown();
+
+      try {
+        future.get(writeTimeout, TimeUnit.MILLISECONDS);
+      } catch (InterruptedException e) {
+        throw new IOException("Socket write interrupted", e);
+      } catch (ExecutionException e) {
+        throw new IOException("Exception in socket write", e);
+      } catch (TimeoutException e) {
+        throw new IOException("Socket write timed out", e);
+      }
+      if (!executor.isTerminated()) {
+        executor.shutdown();
       }
     }
   }

@@ -23,7 +23,7 @@ import com.google.api.client.util.GenericData;
 import com.google.api.client.util.Preconditions;
 import com.google.api.client.util.Sets;
 import com.google.api.client.util.Types;
-
+import java.io.Closeable;
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
@@ -35,6 +35,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.WeakHashMap;
@@ -42,24 +43,20 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
 /**
- * Abstract low-level JSON parser. See
- * <a href="https://code.google.com/p/google-http-java-client/wiki/JSON">
- * https://code.google.com/p/google-http-java-client/wiki/JSON</a>
+ * Abstract low-level JSON parser. See <a
+ * href="https://developers.google.com/api-client-library/java/google-http-java-client/json">
+ * https://developers.google.com/api-client-library/java/google-http-java-client/json</a>
  *
- * <p>
- * Implementation has no fields and therefore thread-safe, but sub-classes are not necessarily
+ * <p>Implementation has no fields and therefore thread-safe, but sub-classes are not necessarily
  * thread-safe.
- * </p>
- * <p>
- * <p>
- * If a JSON map is encountered while using a destination class of type Map, then an
- * {@link ArrayMap} is used by default for the parsed values.
- * </p>
+ *
+ * <p>If a JSON map is encountered while using a destination class of type Map, then an {@link
+ * java.util.ArrayMap} is used by default for the parsed values.
  *
  * @since 1.3
  * @author Yaniv Inbar
  */
-public abstract class JsonParser {
+public abstract class JsonParser implements Closeable {
 
   /**
    * Maps a polymorphic {@link Class} to its {@link Field} with the {@link JsonPolymorphicTypeMap}
@@ -95,15 +92,15 @@ public abstract class JsonParser {
   public abstract String getCurrentName() throws IOException;
 
   /**
-   * Skips to the matching {@link JsonToken#END_ARRAY} if current token is
-   * {@link JsonToken#START_ARRAY}, the matching {@link JsonToken#END_OBJECT} if the current token
-   * is {@link JsonToken#START_OBJECT}, else does nothing.
+   * Skips to the matching {@link JsonToken#END_ARRAY} if current token is {@link
+   * JsonToken#START_ARRAY}, the matching {@link JsonToken#END_OBJECT} if the current token is
+   * {@link JsonToken#START_OBJECT}, else does nothing.
    */
   public abstract JsonParser skipChildren() throws IOException;
 
   /**
-   * Returns a textual representation of the current token or {@code null} if
-   * {@link #getCurrentToken()} is {@code null}.
+   * Returns a textual representation of the current token or {@code null} if {@link
+   * #getCurrentToken()} is {@code null}.
    */
   public abstract String getText() throws IOException;
 
@@ -139,7 +136,7 @@ public abstract class JsonParser {
    *
    * @param <T> destination class
    * @param destinationClass destination class that has a public default constructor to use to
-   *        create a new instance
+   *     create a new instance
    * @return new instance of the parsed destination class
    * @since 1.15
    */
@@ -148,13 +145,13 @@ public abstract class JsonParser {
   }
 
   /**
-   * {@link Beta} <br/>
+   * {@link Beta} <br>
    * Parse a JSON object, array, or value into a new instance of the given destination class using
    * {@link JsonParser#parse(Class, CustomizeJsonParser)}, and then closes the parser.
    *
    * @param <T> destination class
    * @param destinationClass destination class that has a public default constructor to use to
-   *        create a new instance
+   *     create a new instance
    * @param customizeParser optional parser customizer or {@code null} for none
    * @return new instance of the parsed destination class
    */
@@ -171,12 +168,10 @@ public abstract class JsonParser {
   /**
    * Skips the values of all keys in the current object until it finds the given key.
    *
-   * <p>
-   * Before this method is called, the parser must either point to the start or end of a JSON object
-   * or to a field name. After this method ends, the current token will either be the
-   * {@link JsonToken#END_OBJECT} of the current object if the key is not found, or the value of the
-   * key that was found.
-   * </p>
+   * <p>Before this method is called, the parser must either point to the start or end of a JSON
+   * object or to a field name. After this method ends, the current token will either be the {@link
+   * JsonToken#END_OBJECT} of the current object if the key is not found, or the value of the key
+   * that was found.
    *
    * @param keyToFind key to find
    */
@@ -187,12 +182,10 @@ public abstract class JsonParser {
   /**
    * Skips the values of all keys in the current object until it finds one of the given keys.
    *
-   * <p>
-   * Before this method is called, the parser must either point to the start or end of a JSON object
-   * or to a field name. After this method ends, the current token will either be the
-   * {@link JsonToken#END_OBJECT} of the current object if no matching key is found, or the value of
-   * the key that was found.
-   * </p>
+   * <p>Before this method is called, the parser must either point to the start or end of a JSON
+   * object or to a field name. After this method ends, the current token will either be the {@link
+   * JsonToken#END_OBJECT} of the current object if no matching key is found, or the value of the
+   * key that was found.
    *
    * @param keysToFind set of keys to look for
    * @return name of the first matching key found or {@code null} if no match was found
@@ -227,13 +220,11 @@ public abstract class JsonParser {
    * Starts parsing an object or array by making sure the parser points to an object field name,
    * first array value or end of object or array.
    *
-   * <p>
-   * If the parser is at the start of input, {@link #nextToken()} is called. The current token must
-   * then be {@link JsonToken#START_OBJECT}, {@link JsonToken#END_OBJECT},
-   * {@link JsonToken#START_ARRAY}, {@link JsonToken#END_ARRAY}, or {@link JsonToken#FIELD_NAME}.
-   * For an object only, after the method is called, the current token must be either
-   * {@link JsonToken#FIELD_NAME} or {@link JsonToken#END_OBJECT}.
-   * </p>
+   * <p>If the parser is at the start of input, {@link #nextToken()} is called. The current token
+   * must then be {@link JsonToken#START_OBJECT}, {@link JsonToken#END_OBJECT}, {@link
+   * JsonToken#START_ARRAY}, {@link JsonToken#END_ARRAY}, or {@link JsonToken#FIELD_NAME}. For an
+   * object only, after the method is called, the current token must be either {@link
+   * JsonToken#FIELD_NAME} or {@link JsonToken#END_OBJECT}.
    */
   private JsonToken startParsingObjectOrArray() throws IOException {
     JsonToken currentToken = startParsing();
@@ -257,10 +248,8 @@ public abstract class JsonParser {
    * Parse a JSON Object from the given JSON parser -- which is closed after parsing completes --
    * into the given destination object.
    *
-   * <p>
-   * Before this method is called, the parser must either point to the start or end of a JSON object
-   * or to a field name.
-   * </p>
+   * <p>Before this method is called, the parser must either point to the start or end of a JSON
+   * object or to a field name.
    *
    * @param destination destination object
    * @since 1.15
@@ -270,14 +259,12 @@ public abstract class JsonParser {
   }
 
   /**
-   * {@link Beta} <br/>
+   * {@link Beta} <br>
    * Parse a JSON Object from the given JSON parser -- which is closed after parsing completes --
    * into the given destination object, optionally using the given parser customizer.
    *
-   * <p>
-   * Before this method is called, the parser must either point to the start or end of a JSON object
-   * or to a field name.
-   * </p>
+   * <p>Before this method is called, the parser must either point to the start or end of a JSON
+   * object or to a field name.
    *
    * @param destination destination object
    * @param customizeParser optional parser customizer or {@code null} for none
@@ -295,15 +282,13 @@ public abstract class JsonParser {
   /**
    * Parse a JSON object, array, or value into a new instance of the given destination class.
    *
-   * <p>
-   * If it parses an object, after this method ends, the current token will be the object's ending
-   * {@link JsonToken#END_OBJECT}. If it parses an array, after this method ends, the current token
-   * will be the array's ending {@link JsonToken#END_ARRAY}.
-   * </p>
+   * <p>If it parses an object, after this method ends, the current token will be the object's
+   * ending {@link JsonToken#END_OBJECT}. If it parses an array, after this method ends, the current
+   * token will be the array's ending {@link JsonToken#END_ARRAY}.
    *
    * @param <T> destination class
    * @param destinationClass destination class that has a public default constructor to use to
-   *        create a new instance
+   *     create a new instance
    * @return new instance of the parsed destination class
    * @since 1.15
    */
@@ -312,19 +297,17 @@ public abstract class JsonParser {
   }
 
   /**
-   * {@link Beta} <br/>
+   * {@link Beta} <br>
    * Parse a JSON object, array, or value into a new instance of the given destination class,
    * optionally using the given parser customizer.
    *
-   * <p>
-   * If it parses an object, after this method ends, the current token will be the object's ending
-   * {@link JsonToken#END_OBJECT}. If it parses an array, after this method ends, the current token
-   * will be the array's ending {@link JsonToken#END_ARRAY}.
-   * </p>
+   * <p>If it parses an object, after this method ends, the current token will be the object's
+   * ending {@link JsonToken#END_OBJECT}. If it parses an array, after this method ends, the current
+   * token will be the array's ending {@link JsonToken#END_ARRAY}.
    *
    * @param <T> destination class
    * @param destinationClass destination class that has a public default constructor to use to
-   *        create a new instance
+   *     create a new instance
    * @param customizeParser optional parser customizer or {@code null} for none
    * @return new instance of the parsed destination class
    */
@@ -339,11 +322,9 @@ public abstract class JsonParser {
   /**
    * Parse a JSON object, array, or value into a new instance of the given destination class.
    *
-   * <p>
-   * If it parses an object, after this method ends, the current token will be the object's ending
-   * {@link JsonToken#END_OBJECT}. If it parses an array, after this method ends, the current token
-   * will be the array's ending {@link JsonToken#END_ARRAY}.
-   * </p>
+   * <p>If it parses an object, after this method ends, the current token will be the object's
+   * ending {@link JsonToken#END_OBJECT}. If it parses an array, after this method ends, the current
+   * token will be the array's ending {@link JsonToken#END_ARRAY}.
    *
    * @param dataType Type into which the JSON should be parsed
    * @param close {@code true} if {@link #close()} should be called after parsing
@@ -355,15 +336,13 @@ public abstract class JsonParser {
   }
 
   /**
-   * {@link Beta} <br/>
+   * {@link Beta} <br>
    * Parse a JSON object, array, or value into a new instance of the given destination class,
    * optionally using the given parser customizer.
    *
-   * <p>
-   * If it parses an object, after this method ends, the current token will be the object's ending
-   * {@link JsonToken#END_OBJECT}. If it parses an array, after this method ends, the current token
-   * will be the array's ending {@link JsonToken#END_ARRAY}.
-   * </p>
+   * <p>If it parses an object, after this method ends, the current token will be the object's
+   * ending {@link JsonToken#END_OBJECT}. If it parses an array, after this method ends, the current
+   * token will be the array's ending {@link JsonToken#END_ARRAY}.
    *
    * @param dataType Type into which the JSON should be parsed
    * @param close {@code true} if {@link #close()} should be called after parsing
@@ -389,11 +368,9 @@ public abstract class JsonParser {
   /**
    * Parse a JSON object from the given JSON parser into the given destination object.
    *
-   * <p>
-   * Before this method is called, the parser must either point to the start or end of a JSON object
-   * or to a field name. After this method ends, the current token will be the
-   * {@link JsonToken#END_OBJECT} of the current object.
-   * </p>
+   * <p>Before this method is called, the parser must either point to the start or end of a JSON
+   * object or to a field name. After this method ends, the current token will be the {@link
+   * JsonToken#END_OBJECT} of the current object.
    *
    * @param destination destination object
    * @since 1.15
@@ -403,15 +380,13 @@ public abstract class JsonParser {
   }
 
   /**
-   * {@link Beta} <br/>
+   * {@link Beta} <br>
    * Parse a JSON object from the given JSON parser into the given destination object, optionally
    * using the given parser customizer.
    *
-   * <p>
-   * Before this method is called, the parser must either point to the start or end of a JSON object
-   * or to a field name. After this method ends, the current token will be the
-   * {@link JsonToken#END_OBJECT} of the current object.
-   * </p>
+   * <p>Before this method is called, the parser must either point to the start or end of a JSON
+   * object or to a field name. After this method ends, the current token will be the {@link
+   * JsonToken#END_OBJECT} of the current object.
    *
    * @param destination destination object
    * @param customizeParser optional parser customizer or {@code null} for none
@@ -429,7 +404,7 @@ public abstract class JsonParser {
    *
    * @param context destination context stack (possibly empty)
    * @param destination destination object instance or {@code null} for none (for example empty
-   *        context stack)
+   *     context stack)
    * @param customizeParser optional parser customizer or {@code null} for none
    */
   private void parse(
@@ -447,7 +422,11 @@ public abstract class JsonParser {
       // using parseMap.
       @SuppressWarnings("unchecked")
       Map<String, Object> destinationMap = (Map<String, Object>) destination;
-      parseMap(null, destinationMap, Types.getMapValueParameter(destinationClass), context,
+      parseMap(
+          null,
+          destinationMap,
+          Types.getMapValueParameter(destinationClass),
+          context,
           customizeParser);
       return;
     }
@@ -468,12 +447,9 @@ public abstract class JsonParser {
         Field field = fieldInfo.getField();
         int contextSize = context.size();
         context.add(field.getGenericType());
-        Object fieldValue = parseValue(field,
-            fieldInfo.getGenericType(),
-            context,
-            destination,
-            customizeParser,
-            true);
+        Object fieldValue =
+            parseValue(
+                field, fieldInfo.getGenericType(), context, destination, customizeParser, true);
         context.remove(contextSize);
         fieldInfo.setValue(destination, fieldValue);
       } else if (isGenericData) {
@@ -496,9 +472,9 @@ public abstract class JsonParser {
    * the given destination collection.
    *
    * @param destinationCollectionClass class of destination collection (must have a public default
-   *        constructor)
+   *     constructor)
    * @param destinationItemClass class of destination collection item (must have a public default
-   *        constructor)
+   *     constructor)
    * @since 1.15
    */
   public final <T> Collection<T> parseArrayAndClose(
@@ -507,19 +483,22 @@ public abstract class JsonParser {
   }
 
   /**
-   * {@link Beta} <br/>
+   * {@link Beta} <br>
    * Parse a JSON Array from the given JSON parser (which is closed after parsing completes) into
    * the given destination collection, optionally using the given parser customizer.
    *
    * @param destinationCollectionClass class of destination collection (must have a public default
-   *        constructor)
+   *     constructor)
    * @param destinationItemClass class of destination collection item (must have a public default
-   *        constructor)
+   *     constructor)
    * @param customizeParser optional parser customizer or {@code null} for none
    */
   @Beta
-  public final <T> Collection<T> parseArrayAndClose(Class<?> destinationCollectionClass,
-      Class<T> destinationItemClass, CustomizeJsonParser customizeParser) throws IOException {
+  public final <T> Collection<T> parseArrayAndClose(
+      Class<?> destinationCollectionClass,
+      Class<T> destinationItemClass,
+      CustomizeJsonParser customizeParser)
+      throws IOException {
     try {
       return parseArray(destinationCollectionClass, destinationItemClass, customizeParser);
     } finally {
@@ -533,7 +512,7 @@ public abstract class JsonParser {
    *
    * @param destinationCollection destination collection
    * @param destinationItemClass class of destination collection item (must have a public default
-   *        constructor)
+   *     constructor)
    * @since 1.15
    */
   public final <T> void parseArrayAndClose(
@@ -543,18 +522,21 @@ public abstract class JsonParser {
   }
 
   /**
-   * {@link Beta} <br/>
+   * {@link Beta} <br>
    * Parse a JSON Array from the given JSON parser (which is closed after parsing completes) into
    * the given destination collection, optionally using the given parser customizer.
    *
    * @param destinationCollection destination collection
    * @param destinationItemClass class of destination collection item (must have a public default
-   *        constructor)
+   *     constructor)
    * @param customizeParser optional parser customizer or {@code null} for none
    */
   @Beta
-  public final <T> void parseArrayAndClose(Collection<? super T> destinationCollection,
-      Class<T> destinationItemClass, CustomizeJsonParser customizeParser) throws IOException {
+  public final <T> void parseArrayAndClose(
+      Collection<? super T> destinationCollection,
+      Class<T> destinationItemClass,
+      CustomizeJsonParser customizeParser)
+      throws IOException {
     try {
       parseArray(destinationCollection, destinationItemClass, customizeParser);
     } finally {
@@ -566,9 +548,9 @@ public abstract class JsonParser {
    * Parse a JSON Array from the given JSON parser into the given destination collection.
    *
    * @param destinationCollectionClass class of destination collection (must have a public default
-   *        constructor)
+   *     constructor)
    * @param destinationItemClass class of destination collection item (must have a public default
-   *        constructor)
+   *     constructor)
    * @since 1.15
    */
   public final <T> Collection<T> parseArray(
@@ -577,19 +559,22 @@ public abstract class JsonParser {
   }
 
   /**
-   * {@link Beta} <br/>
+   * {@link Beta} <br>
    * Parse a JSON Array from the given JSON parser into the given destination collection, optionally
    * using the given parser customizer.
    *
    * @param destinationCollectionClass class of destination collection (must have a public default
-   *        constructor)
+   *     constructor)
    * @param destinationItemClass class of destination collection item (must have a public default
-   *        constructor)
+   *     constructor)
    * @param customizeParser optional parser customizer or {@code null} for none
    */
   @Beta
-  public final <T> Collection<T> parseArray(Class<?> destinationCollectionClass,
-      Class<T> destinationItemClass, CustomizeJsonParser customizeParser) throws IOException {
+  public final <T> Collection<T> parseArray(
+      Class<?> destinationCollectionClass,
+      Class<T> destinationItemClass,
+      CustomizeJsonParser customizeParser)
+      throws IOException {
     @SuppressWarnings("unchecked")
     Collection<T> destinationCollection =
         (Collection<T>) Data.newCollectionInstance(destinationCollectionClass);
@@ -602,7 +587,7 @@ public abstract class JsonParser {
    *
    * @param destinationCollection destination collection
    * @param destinationItemClass class of destination collection item (must have a public default
-   *        constructor)
+   *     constructor)
    * @since 1.15
    */
   public final <T> void parseArray(
@@ -612,18 +597,21 @@ public abstract class JsonParser {
   }
 
   /**
-   * {@link Beta} <br/>
+   * {@link Beta} <br>
    * Parse a JSON Array from the given JSON parser into the given destination collection, optionally
    * using the given parser customizer.
    *
    * @param destinationCollection destination collection
    * @param destinationItemClass class of destination collection item (must have a public default
-   *        constructor)
+   *     constructor)
    * @param customizeParser optional parser customizer or {@code null} for none
    */
   @Beta
-  public final <T> void parseArray(Collection<? super T> destinationCollection,
-      Class<T> destinationItemClass, CustomizeJsonParser customizeParser) throws IOException {
+  public final <T> void parseArray(
+      Collection<? super T> destinationCollection,
+      Class<T> destinationItemClass,
+      CustomizeJsonParser customizeParser)
+      throws IOException {
     parseArray(
         null, destinationCollection, destinationItemClass, new ArrayList<Type>(), customizeParser);
   }
@@ -638,18 +626,25 @@ public abstract class JsonParser {
    * @param context destination context stack (possibly empty)
    * @param customizeParser optional parser customizer or {@code null} for none
    */
-  private <T> void parseArray(Field fieldContext, Collection<T> destinationCollection,
-      Type destinationItemType, ArrayList<Type> context, CustomizeJsonParser customizeParser)
+  private <T> void parseArray(
+      Field fieldContext,
+      Collection<T> destinationCollection,
+      Type destinationItemType,
+      ArrayList<Type> context,
+      CustomizeJsonParser customizeParser)
       throws IOException {
     JsonToken curToken = startParsingObjectOrArray();
     while (curToken != JsonToken.END_ARRAY) {
       @SuppressWarnings("unchecked")
-      T parsedValue = (T) parseValue(fieldContext,
-          destinationItemType,
-          context,
-          destinationCollection,
-          customizeParser,
-          true);
+      T parsedValue =
+          (T)
+              parseValue(
+                  fieldContext,
+                  destinationItemType,
+                  context,
+                  destinationCollection,
+                  customizeParser,
+                  true);
       destinationCollection.add(parsedValue);
       curToken = nextToken();
     }
@@ -665,8 +660,13 @@ public abstract class JsonParser {
    * @param context destination context stack (possibly empty)
    * @param customizeParser optional parser customizer or {@code null} for none
    */
-  private void parseMap(Field fieldContext, Map<String, Object> destinationMap, Type valueType,
-      ArrayList<Type> context, CustomizeJsonParser customizeParser) throws IOException {
+  private void parseMap(
+      Field fieldContext,
+      Map<String, Object> destinationMap,
+      Type valueType,
+      ArrayList<Type> context,
+      CustomizeJsonParser customizeParser)
+      throws IOException {
     JsonToken curToken = startParsingObjectOrArray();
     while (curToken == JsonToken.FIELD_NAME) {
       String key = getText();
@@ -689,17 +689,19 @@ public abstract class JsonParser {
    * @param valueType value type or {@code null} if not known (for example into a map)
    * @param context destination context stack (possibly empty)
    * @param destination destination object instance or {@code null} for none (for example empty
-   *        context stack)
+   *     context stack)
    * @param customizeParser customize parser or {@code null} for none
    * @param handlePolymorphic whether or not to check for polymorphic schema
    * @return parsed value
    */
-  private final Object parseValue(Field fieldContext,
+  private final Object parseValue(
+      Field fieldContext,
       Type valueType,
       ArrayList<Type> context,
       Object destination,
       CustomizeJsonParser customizeParser,
-      boolean handlePolymorphic) throws IOException {
+      boolean handlePolymorphic)
+      throws IOException {
 
     valueType = Data.resolveWildcardTypeOrTypeVariable(context, valueType);
     // resolve a parameterized type to a class
@@ -715,13 +717,16 @@ public abstract class JsonParser {
     // value type is now null, class, parameterized type, or generic array type
     JsonToken token = getCurrentToken();
     try {
-      switch (getCurrentToken()) {
+      switch (token) {
         case START_ARRAY:
         case END_ARRAY:
           boolean isArray = Types.isArray(valueType);
-          Preconditions.checkArgument(valueType == null || isArray || valueClass != null
-              && Types.isAssignableToOrFrom(valueClass, Collection.class),
-              "expected collection or array type but got %s", valueType);
+          Preconditions.checkArgument(
+              valueType == null
+                  || isArray
+                  || valueClass != null && Types.isAssignableToOrFrom(valueClass, Collection.class),
+              "expected collection or array type but got %s",
+              valueType);
           Collection<Object> collectionValue = null;
           if (customizeParser != null && fieldContext != null) {
             collectionValue = customizeParser.newInstanceForArray(destination, fieldContext);
@@ -768,8 +773,10 @@ public abstract class JsonParser {
             context.add(valueType);
           }
           if (isMap && !GenericData.class.isAssignableFrom(valueClass)) {
-            Type subValueType = Map.class.isAssignableFrom(valueClass)
-                ? Types.getMapValueParameter(valueType) : null;
+            Type subValueType =
+                Map.class.isAssignableFrom(valueClass)
+                    ? Types.getMapValueParameter(valueType)
+                    : null;
             if (subValueType != null) {
               @SuppressWarnings("unchecked")
               Map<String, Object> destinationMap = (Map<String, Object>) newInstance;
@@ -807,9 +814,12 @@ public abstract class JsonParser {
           return parser.parseValue(fieldContext, typeClass, context, null, null, false);
         case VALUE_TRUE:
         case VALUE_FALSE:
-          Preconditions.checkArgument(valueType == null || valueClass == boolean.class
-              || valueClass != null && valueClass.isAssignableFrom(Boolean.class),
-              "expected type Boolean or boolean but got %s", valueType);
+          Preconditions.checkArgument(
+              valueType == null
+                  || valueClass == boolean.class
+                  || valueClass != null && valueClass.isAssignableFrom(Boolean.class),
+              "expected type Boolean or boolean but got %s",
+              valueType);
           return token == JsonToken.VALUE_TRUE ? Boolean.TRUE : Boolean.FALSE;
         case VALUE_NUMBER_FLOAT:
         case VALUE_NUMBER_INT:
@@ -842,14 +852,24 @@ public abstract class JsonParser {
           }
           throw new IllegalArgumentException("expected numeric type but got " + valueType);
         case VALUE_STRING:
-          Preconditions.checkArgument(valueClass == null
-              || !Number.class.isAssignableFrom(valueClass) || fieldContext != null
-              && fieldContext.getAnnotation(JsonString.class) != null,
-              "number field formatted as a JSON string must use the @JsonString annotation");
-          // TODO(yanivi): "special" values like Double.POSITIVE_INFINITY?
+          // TODO(user): Maybe refactor this method in multiple mini-methods for readability?
+          String text = getText().trim().toLowerCase(Locale.US);
+          // If we are expecting a Float / Double and the Text is NaN (case insensitive)
+          // Then: Accept, even if the Annotation is JsonString.
+          // Otherwise: Check that the Annotation is not JsonString.
+          if (!(((valueClass == float.class || valueClass == Float.class)
+                  || (valueClass == double.class || valueClass == Double.class))
+              && (text.equals("nan") || text.equals("infinity") || text.equals("-infinity")))) {
+            Preconditions.checkArgument(
+                valueClass == null
+                    || !Number.class.isAssignableFrom(valueClass)
+                    || fieldContext != null && fieldContext.getAnnotation(JsonString.class) != null,
+                "number field formatted as a JSON string must use the @JsonString annotation");
+          }
           return Data.parsePrimitiveValue(valueType, getText());
         case VALUE_NULL:
-          Preconditions.checkArgument(valueClass == null || !valueClass.isPrimitive(),
+          Preconditions.checkArgument(
+              valueClass == null || !valueClass.isPrimitive(),
               "primitive number field but found a JSON null");
           if (valueClass != null
               && 0 != (valueClass.getModifiers() & (Modifier.ABSTRACT | Modifier.INTERFACE))) {
@@ -885,13 +905,11 @@ public abstract class JsonParser {
    * Finds the {@link Field} on the given {@link Class} that has the {@link JsonPolymorphicTypeMap}
    * annotation, or {@code null} if there is none.
    *
-   * <p>
-   * The class must contain exactly zero or one {@link JsonPolymorphicTypeMap} annotation.
-   * </p>
+   * <p>The class must contain exactly zero or one {@link JsonPolymorphicTypeMap} annotation.
    *
    * @param key The {@link Class} to search in, or {@code null}
    * @return The {@link Field} with the {@link JsonPolymorphicTypeMap} annotation, or {@code null}
-   *         either if there is none or if the key is {@code null}
+   *     either if there is none or if the key is {@code null}
    */
   private static Field getCachedTypemapFieldFor(Class<?> key) {
     if (key == null) {
@@ -912,11 +930,14 @@ public abstract class JsonParser {
         JsonPolymorphicTypeMap typemapAnnotation =
             field.getAnnotation(JsonPolymorphicTypeMap.class);
         if (typemapAnnotation != null) {
-          Preconditions.checkArgument(value == null,
+          Preconditions.checkArgument(
+              value == null,
               "Class contains more than one field with @JsonPolymorphicTypeMap annotation: %s",
               key);
-          Preconditions.checkArgument(Data.isPrimitive(field.getType()),
-              "Field which has the @JsonPolymorphicTypeMap, %s, is not a supported type: %s", key,
+          Preconditions.checkArgument(
+              Data.isPrimitive(field.getType()),
+              "Field which has the @JsonPolymorphicTypeMap, %s, is not a supported type: %s",
+              key,
               field.getType());
           value = field;
           // Check for duplicate typeDef keys
@@ -925,8 +946,10 @@ public abstract class JsonParser {
           Preconditions.checkArgument(
               typeDefs.length > 0, "@JsonPolymorphicTypeMap must have at least one @TypeDef");
           for (TypeDef typeDef : typeDefs) {
-            Preconditions.checkArgument(typeDefKeys.add(typeDef.key()),
-                "Class contains two @TypeDef annotations with identical key: %s", typeDef.key());
+            Preconditions.checkArgument(
+                typeDefKeys.add(typeDef.key()),
+                "Class contains two @TypeDef annotations with identical key: %s",
+                typeDef.key());
           }
         }
       }

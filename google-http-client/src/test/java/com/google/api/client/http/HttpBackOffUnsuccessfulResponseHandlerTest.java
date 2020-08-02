@@ -18,10 +18,10 @@ import com.google.api.client.http.HttpBackOffUnsuccessfulResponseHandler.BackOff
 import com.google.api.client.testing.util.MockBackOff;
 import com.google.api.client.testing.util.MockSleeper;
 import com.google.api.client.util.BackOff;
-
-import junit.framework.TestCase;
-
+import com.google.api.client.util.Sleeper;
 import java.io.IOException;
+import java.util.concurrent.atomic.AtomicBoolean;
+import junit.framework.TestCase;
 
 /**
  * Test {@link HttpBackOffUnsuccessfulResponseHandler}.
@@ -35,11 +35,16 @@ public class HttpBackOffUnsuccessfulResponseHandlerTest extends TestCase {
   }
 
   public void testHandleResponse_requiredFalse() throws IOException {
-    subsetHandleResponse(0, 0, true, new MockBackOff(), new BackOffRequired() {
-      public boolean isRequired(HttpResponse response) {
-        return false;
-      }
-    });
+    subsetHandleResponse(
+        0,
+        0,
+        true,
+        new MockBackOff(),
+        new BackOffRequired() {
+          public boolean isRequired(HttpResponse response) {
+            return false;
+          }
+        });
   }
 
   public void testHandleResponse_requiredTrue() throws IOException {
@@ -54,12 +59,46 @@ public class HttpBackOffUnsuccessfulResponseHandlerTest extends TestCase {
       throws IOException {
     // create the handler
     MockSleeper sleeper = new MockSleeper();
-    HttpBackOffUnsuccessfulResponseHandler handler = new HttpBackOffUnsuccessfulResponseHandler(
-        backOff).setSleeper(sleeper).setBackOffRequired(backOffRequired);
+    HttpBackOffUnsuccessfulResponseHandler handler =
+        new HttpBackOffUnsuccessfulResponseHandler(backOff)
+            .setSleeper(sleeper)
+            .setBackOffRequired(backOffRequired);
 
     while (handler.handleResponse(null, null, retry)) {
       assertEquals(millis, sleeper.getLastMillis());
     }
     assertEquals(count, sleeper.getCount());
+  }
+
+  public void testHandleResponse_returnsFalseAndThreadRemainsInterrupted_whenSleepIsInterrupted()
+      throws Exception {
+    final AtomicBoolean stillInterrupted = new AtomicBoolean(false);
+    Thread runningThread =
+        new Thread() {
+          @Override
+          public void run() {
+            HttpBackOffUnsuccessfulResponseHandler testTarget =
+                new HttpBackOffUnsuccessfulResponseHandler(
+                        new MockBackOff()
+                            .setBackOffMillis(Long.MAX_VALUE) // Sleep until we interrupt it.
+                            .setMaxTries(1))
+                    .setSleeper(
+                        Sleeper.DEFAULT) // Needs to be a real sleeper so we can interrupt it.
+                    .setBackOffRequired(BackOffRequired.ALWAYS);
+
+            try {
+              testTarget.handleResponse(null, null, /* retrySupported= */ true);
+            } catch (Exception ignored) {
+            }
+            stillInterrupted.set(Thread.currentThread().isInterrupted());
+          }
+        };
+    runningThread.start();
+    // Give runningThread some time to start.
+    Thread.sleep(500L);
+    runningThread.interrupt();
+    runningThread.join();
+
+    assertTrue(stillInterrupted.get());
   }
 }

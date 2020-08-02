@@ -14,13 +14,12 @@
 
 package com.google.api.client.extensions.android;
 
+import android.os.Build;
 import com.google.api.client.util.Beta;
 import com.google.api.client.util.Preconditions;
 
-import android.os.Build;
-
 /**
- * {@link Beta} <br/>
+ * {@link Beta} <br>
  * Utilities for Android.
  *
  * @since 1.11
@@ -45,11 +44,12 @@ public class AndroidUtils {
    * @see android.os.Build.VERSION_CODES
    */
   public static void checkMinimumSdkLevel(int minimumSdkLevel) {
-    Preconditions.checkArgument(isMinimumSdkLevel(minimumSdkLevel),
-        "running on Android SDK level %s but requires minimum %s", Build.VERSION.SDK_INT,
+    Preconditions.checkArgument(
+        isMinimumSdkLevel(minimumSdkLevel),
+        "running on Android SDK level %s but requires minimum %s",
+        Build.VERSION.SDK_INT,
         minimumSdkLevel);
   }
 
-  private AndroidUtils() {
-  }
+  private AndroidUtils() {}
 }

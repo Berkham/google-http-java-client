@@ -14,17 +14,15 @@
 
 package com.google.api.client.extensions.android.json;
 
+import android.annotation.TargetApi;
+import android.util.JsonReader;
+import android.util.JsonWriter;
 import com.google.api.client.extensions.android.AndroidUtils;
 import com.google.api.client.json.JsonFactory;
 import com.google.api.client.json.JsonGenerator;
 import com.google.api.client.json.JsonParser;
 import com.google.api.client.util.Beta;
 import com.google.api.client.util.Charsets;
-
-import android.annotation.TargetApi;
-import android.util.JsonReader;
-import android.util.JsonWriter;
-
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
@@ -35,17 +33,13 @@ import java.io.Writer;
 import java.nio.charset.Charset;
 
 /**
- * {@link Beta} <br/>
+ * {@link Beta} <br>
  * Low-level JSON library implementation based on GSON.
  *
- * <p>
- * Implementation is thread-safe, and sub-classes must be thread-safe. For maximum efficiency,
+ * <p>Implementation is thread-safe, and sub-classes must be thread-safe. For maximum efficiency,
  * applications should use a single globally-shared instance of the JSON factory.
- * </p>
  *
- * <p>
- * Required minimum Android SDK 3.0 (level 11).
- * </p>
+ * <p>Required minimum Android SDK 3.0 (level 11).
  *
  * @since 1.11
  * @author Yaniv Inbar
@@ -78,7 +72,7 @@ public class AndroidJsonFactory extends JsonFactory {
   @Override
   public JsonParser createJsonParser(InputStream in) {
     // TODO(mlinder): Charset should be detected automatically by the parser. Related to:
-    // http://code.google.com/p/google-http-java-client/issues/detail?id=6
+    // http://github.com/googleapis/google-http-java-client/issues/6
     return createJsonParser(new InputStreamReader(in, Charsets.UTF_8));
   }
 

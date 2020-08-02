@@ -25,7 +25,6 @@ import com.google.api.client.util.Preconditions;
 import com.google.api.client.util.Throwables;
 import com.google.api.client.util.Types;
 import com.google.api.client.util.escape.CharEscapers;
-
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
@@ -42,27 +41,21 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Implements support for HTTP form content encoding parsing of type
- * {@code application/x-www-form-urlencoded} as specified in the <a href=
+ * Implements support for HTTP form content encoding parsing of type {@code
+ * application/x-www-form-urlencoded} as specified in the <a href=
  * "http://www.w3.org/TR/1998/REC-html40-19980424/interact/forms.html#h-17.13.4.1" >HTML 4.0
  * Specification</a>.
  *
- * <p>
- * Implementation is thread-safe.
- * </p>
+ * <p>Implementation is thread-safe.
  *
- * <p>
- * The data is parsed using {@link #parse(String, Object)}.
- * </p>
+ * <p>The data is parsed using {@link #parse(String, Object)}.
  *
- * <p>
- * Sample usage:
- * </p>
+ * <p>Sample usage:
  *
  * <pre>
-   static void setParser(HttpTransport transport) {
-     transport.addParser(new UrlEncodedParser());
-   }
+ * static void setParser(HttpTransport transport) {
+ * transport.addParser(new UrlEncodedParser());
+ * }
  * </pre>
  *
  * @since 1.0
@@ -80,7 +73,6 @@ public class UrlEncodedParser implements ObjectParser {
    */
   public static final String MEDIA_TYPE =
       new HttpMediaType(UrlEncodedParser.CONTENT_TYPE).setCharsetParameter(Charsets.UTF_8).build();
-
   /**
    * Parses the given URL-encoded content into the given data object of data key name/value pairs
    * using {@link #parse(Reader, Object)}.
@@ -89,11 +81,23 @@ public class UrlEncodedParser implements ObjectParser {
    * @param data data key name/value pairs
    */
   public static void parse(String content, Object data) {
+    parse(content, data, true);
+  }
+
+  /**
+   * Parses the given URL-encoded content into the given data object of data key name/value pairs
+   * using {@link #parse(Reader, Object)}.
+   *
+   * @param content URL-encoded content or {@code null} to ignore content
+   * @param data data key name/value pairs
+   * @param decodeEnabled flag that specifies whether decoding should be enabled.
+   */
+  public static void parse(String content, Object data, boolean decodeEnabled) {
     if (content == null) {
       return;
     }
     try {
-      parse(new StringReader(content), data);
+      parse(new StringReader(content), data, decodeEnabled);
     } catch (IOException exception) {
       // I/O exception not expected on a string
       throw Throwables.propagate(exception);
@@ -104,27 +108,47 @@ public class UrlEncodedParser implements ObjectParser {
    * Parses the given URL-encoded content into the given data object of data key name/value pairs,
    * including support for repeating data key names.
    *
-   * <p>
-   * Declared fields of a "primitive" type (as defined by {@link Data#isPrimitive(Type)} are parsed
-   * using {@link Data#parsePrimitiveValue(Type, String)} where the {@link Class} parameter is the
-   * declared field class. Declared fields of type {@link Collection} are used to support repeating
-   * data key names, so each member of the collection is an additional data key value. They are
-   * parsed the same as "primitive" fields, except that the generic type parameter of the collection
-   * is used as the {@link Class} parameter.
-   * </p>
+   * <p>Declared fields of a "primitive" type (as defined by {@link Data#isPrimitive(Type)} are
+   * parsed using {@link Data#parsePrimitiveValue(Type, String)} where the {@link Class} parameter
+   * is the declared field class. Declared fields of type {@link Collection} are used to support
+   * repeating data key names, so each member of the collection is an additional data key value.
+   * They are parsed the same as "primitive" fields, except that the generic type parameter of the
+   * collection is used as the {@link Class} parameter.
    *
-   * <p>
-   * If there is no declared field for an input parameter name, it will be ignored unless the input
-   * {@code data} parameter is a {@link Map}. If it is a map, the parameter value will be stored
-   * either as a string, or as a {@link ArrayList}&lt;String&gt; in the case of repeated parameters.
-   * </p>
+   * <p>If there is no declared field for an input parameter name, it will be ignored unless the
+   * input {@code data} parameter is a {@link Map}. If it is a map, the parameter value will be
+   * stored either as a string, or as a {@link ArrayList}&lt;String&gt; in the case of repeated
+   * parameters.
    *
    * @param reader URL-encoded reader
    * @param data data key name/value pairs
-   *
    * @since 1.14
    */
   public static void parse(Reader reader, Object data) throws IOException {
+    parse(reader, data, true);
+  }
+
+  /**
+   * Parses the given URL-encoded content into the given data object of data key name/value pairs,
+   * including support for repeating data key names.
+   *
+   * <p>Declared fields of a "primitive" type (as defined by {@link Data#isPrimitive(Type)} are
+   * parsed using {@link Data#parsePrimitiveValue(Type, String)} where the {@link Class} parameter
+   * is the declared field class. Declared fields of type {@link Collection} are used to support
+   * repeating data key names, so each member of the collection is an additional data key value.
+   * They are parsed the same as "primitive" fields, except that the generic type parameter of the
+   * collection is used as the {@link Class} parameter.
+   *
+   * <p>If there is no declared field for an input parameter name, it is ignored unless the input
+   * {@code data} parameter is a {@link Map}. If it is a map, the parameter value is stored either
+   * as a string, or as a {@link ArrayList}&lt;String&gt; in the case of repeated parameters.
+   *
+   * @param reader URL-encoded reader
+   * @param data data key name/value pairs
+   * @param decodeEnabled flag that specifies whether data should be decoded.
+   * @since 1.14
+   */
+  public static void parse(Reader reader, Object data, boolean decodeEnabled) throws IOException {
     Class<?> clazz = data.getClass();
     ClassInfo classInfo = ClassInfo.of(clazz);
     List<Type> context = Arrays.<Type>asList(clazz);
@@ -135,16 +159,21 @@ public class UrlEncodedParser implements ObjectParser {
     StringWriter nameWriter = new StringWriter();
     StringWriter valueWriter = new StringWriter();
     boolean readingName = true;
-    mainLoop: while (true) {
+    mainLoop:
+    while (true) {
       int read = reader.read();
       switch (read) {
         case -1:
-      // falls through
+          // falls through
         case '&':
           // parse name/value pair
-          String name = CharEscapers.decodeUri(nameWriter.toString());
+          String name =
+              decodeEnabled ? CharEscapers.decodeUri(nameWriter.toString()) : nameWriter.toString();
           if (name.length() != 0) {
-            String stringValue = CharEscapers.decodeUri(valueWriter.toString());
+            String stringValue =
+                decodeEnabled
+                    ? CharEscapers.decodeUri(valueWriter.toString())
+                    : valueWriter.toString();
             // get the field from the type information
             FieldInfo fieldInfo = classInfo.getFieldInfo(name);
             if (fieldInfo != null) {
@@ -155,7 +184,9 @@ public class UrlEncodedParser implements ObjectParser {
                 // array that can handle repeating values
                 Class<?> rawArrayComponentType =
                     Types.getRawArrayComponentType(context, Types.getArrayComponentType(type));
-                arrayValueMap.put(fieldInfo.getField(), rawArrayComponentType,
+                arrayValueMap.put(
+                    fieldInfo.getField(),
+                    rawArrayComponentType,
                     parseValue(rawArrayComponentType, context, stringValue));
               } else if (Types.isAssignableToOrFrom(
                   Types.getRawArrayComponentType(context, type), Iterable.class)) {
@@ -196,8 +227,13 @@ public class UrlEncodedParser implements ObjectParser {
           }
           break;
         case '=':
-          // finished with name, now read value
-          readingName = false;
+          if (readingName) {
+            // finished with name, now read value
+            readingName = false;
+          } else {
+            // '=' is in the value
+            valueWriter.write(read);
+          }
           break;
         default:
           // read one more character

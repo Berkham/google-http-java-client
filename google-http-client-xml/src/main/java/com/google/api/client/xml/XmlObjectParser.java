@@ -18,32 +18,26 @@ import com.google.api.client.util.Beta;
 import com.google.api.client.util.ObjectParser;
 import com.google.api.client.util.Preconditions;
 import com.google.api.client.util.Types;
-
-import org.xmlpull.v1.XmlPullParser;
-import org.xmlpull.v1.XmlPullParserException;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.Reader;
 import java.lang.reflect.Type;
 import java.nio.charset.Charset;
+import org.xmlpull.v1.XmlPullParser;
+import org.xmlpull.v1.XmlPullParserException;
 
 /**
- * {@link Beta} <br/>
+ * {@link Beta} <br>
  * XML HTTP parser into an data class of key/value pairs.
  *
- * <p>
- * Implementation is thread-safe.
- * </p>
+ * <p>Implementation is thread-safe.
  *
- * <p>
- * Sample usage:
- * </p>
+ * <p>Sample usage:
  *
  * <pre>
-  static void setParser(HttpRequest request, XmlNamespaceDictionary namespaceDictionary) {
-    request.setParser(new XmlObjectParser(namespaceDictionary));
-  }
+ * static void setParser(HttpRequest request, XmlNamespaceDictionary namespaceDictionary) {
+ * request.setParser(new XmlObjectParser(namespaceDictionary));
+ * }
  * </pre>
  *
  * @since 1.10
@@ -63,9 +57,7 @@ public class XmlObjectParser implements ObjectParser {
     this.namespaceDictionary = Preconditions.checkNotNull(namespaceDictionary);
   }
 
-  /**
-   * Returns the XML namespace dictionary.
-   */
+  /** Returns the XML namespace dictionary. */
   public final XmlNamespaceDictionary getNamespaceDictionary() {
     return namespaceDictionary;
   }
@@ -84,8 +76,7 @@ public class XmlObjectParser implements ObjectParser {
     return (T) parseAndClose(in, charset, (Type) dataClass);
   }
 
-  public Object parseAndClose(InputStream in, Charset charset, Type dataType)
-      throws IOException {
+  public Object parseAndClose(InputStream in, Charset charset, Type dataType) throws IOException {
     try {
       // Initialize the parser
       XmlPullParser parser = Xml.createParser();

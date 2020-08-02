@@ -14,24 +14,20 @@
 
 package com.google.api.client.extensions.android.json;
 
+import android.annotation.TargetApi;
+import android.util.JsonWriter;
 import com.google.api.client.json.JsonFactory;
 import com.google.api.client.json.JsonGenerator;
 import com.google.api.client.util.Beta;
-
-import android.annotation.TargetApi;
-import android.util.JsonWriter;
-
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 
 /**
- * {@link Beta} <br/>
+ * {@link Beta} <br>
  * Low-level JSON serializer implementation based on GSON.
  *
- * <p>
- * Implementation is not thread-safe.
- * </p>
+ * <p>Implementation is not thread-safe.
  *
  * @author Yaniv Inbar
  */

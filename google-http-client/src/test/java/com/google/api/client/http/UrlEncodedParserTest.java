@@ -17,17 +17,15 @@ package com.google.api.client.http;
 import com.google.api.client.util.ArrayMap;
 import com.google.api.client.util.GenericData;
 import com.google.api.client.util.Key;
+import com.google.api.client.util.Objects;
 import com.google.api.client.util.Value;
-import com.google.common.base.Objects;
-
-import junit.framework.TestCase;
-
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import junit.framework.TestCase;
 
 /**
  * Tests {@link UrlEncodedParser}.
@@ -36,8 +34,7 @@ import java.util.List;
  */
 public class UrlEncodedParserTest extends TestCase {
 
-  public UrlEncodedParserTest() {
-  }
+  public UrlEncodedParserTest() {}
 
   public UrlEncodedParserTest(String name) {
     super(name);
@@ -45,36 +42,32 @@ public class UrlEncodedParserTest extends TestCase {
 
   public static class Simple {
 
-    @Key
-    Void v;
+    @Key Void v;
 
-    @Key
-    String a;
+    @Key String a;
 
-    @Key
-    String b;
+    @Key String b;
 
-    @Key
-    String c;
+    @Key String c;
 
-    @Key
-    List<String> q;
+    @Key List<String> q;
 
-    @Key
-    String[] r;
+    @Key String[] r;
 
-    @Key
-    Object o;
+    @Key Object o;
 
     @Override
     public boolean equals(Object obj) {
       Simple other = (Simple) obj;
-      return Objects.equal(a, other.a) && Objects.equal(b, other.b) && Objects.equal(c, other.c)
-          && Objects.equal(q, other.q) && Arrays.equals(r, other.r) && Objects.equal(o, other.o);
+      return Objects.equal(a, other.a)
+          && Objects.equal(b, other.b)
+          && Objects.equal(c, other.c)
+          && Objects.equal(q, other.q)
+          && Arrays.equals(r, other.r)
+          && Objects.equal(o, other.o);
     }
 
-    public Simple() {
-    }
+    public Simple() {}
 
     @Override
     public String toString() {
@@ -90,20 +83,15 @@ public class UrlEncodedParserTest extends TestCase {
   }
 
   public static class Generic extends GenericData {
-    @Key
-    String a;
+    @Key String a;
 
-    @Key
-    String b;
+    @Key String b;
 
-    @Key
-    String c;
+    @Key String c;
 
-    @Key
-    List<String> q;
+    @Key List<String> q;
 
-    @Key
-    Object o;
+    @Key Object o;
 
     @Override
     public Generic set(String fieldName, Object value) {
@@ -114,9 +102,9 @@ public class UrlEncodedParserTest extends TestCase {
   public void testParse_simple() {
     Simple actual = new Simple();
     UrlEncodedParser.parse(
-        "v=ignore&v=ignore2&q=1&a=x&b=y&c=z&q=2&undeclared=0&o=object&r=a1&r=a2", actual);
+        "v=ignore&v=ignore2&q=1&a=x=&b=y&c=z&q=2&undeclared=0&o=object&r=a1&r=a2", actual);
     Simple expected = new Simple();
-    expected.a = "x";
+    expected.a = "x=";
     expected.b = "y";
     expected.c = "z";
     expected.q = new ArrayList<String>(Arrays.asList("1", "2"));
@@ -171,7 +159,6 @@ public class UrlEncodedParserTest extends TestCase {
   }
 
   public enum E {
-
     @Value
     VALUE,
     @Value("other")
@@ -179,10 +166,8 @@ public class UrlEncodedParserTest extends TestCase {
   }
 
   public static class EnumValue extends GenericData {
-    @Key
-    public E value;
-    @Key
-    public E otherValue;
+    @Key public E value;
+    @Key public E otherValue;
 
     @Override
     public EnumValue set(String fieldName, Object value) {

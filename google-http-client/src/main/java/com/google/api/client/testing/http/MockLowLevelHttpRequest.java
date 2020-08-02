@@ -20,7 +20,6 @@ import com.google.api.client.http.LowLevelHttpResponse;
 import com.google.api.client.util.Beta;
 import com.google.api.client.util.Charsets;
 import com.google.api.client.util.IOUtils;
-
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -30,16 +29,15 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.zip.GZIPInputStream;
 
 /**
- * {@link Beta} <br/>
+ * {@link Beta} <br>
  * Mock for {@link LowLevelHttpRequest}.
  *
- * <p>
- * Implementation is not thread-safe.
- * </p>
+ * <p>Implementation is not thread-safe.
  *
  * @author Yaniv Inbar
  * @since 1.3
@@ -56,14 +54,11 @@ public class MockLowLevelHttpRequest extends LowLevelHttpRequest {
   /**
    * HTTP response to return from {@link #execute()}.
    *
-   * <p>
-   * By default this is a new instance of {@link MockLowLevelHttpResponse}.
-   * </p>
+   * <p>By default this is a new instance of {@link MockLowLevelHttpResponse}.
    */
   private MockLowLevelHttpResponse response = new MockLowLevelHttpResponse();
 
-  public MockLowLevelHttpRequest() {
-  }
+  public MockLowLevelHttpRequest() {}
 
   /**
    * @param url Request URL or {@code null} for none
@@ -75,7 +70,7 @@ public class MockLowLevelHttpRequest extends LowLevelHttpRequest {
 
   @Override
   public void addHeader(String name, String value) throws IOException {
-    name = name.toLowerCase();
+    name = name.toLowerCase(Locale.US);
     List<String> values = headersMap.get(name);
     if (values == null) {
       values = new ArrayList<String>();
@@ -101,10 +96,8 @@ public class MockLowLevelHttpRequest extends LowLevelHttpRequest {
   /**
    * Returns an unmodifiable view of the map of lowercase header name to values.
    *
-   * <p>
-   * Note that unlike this method, {@link #getFirstHeaderValue(String)} and
-   * {@link #getHeaderValues(String)} are not case sensitive with respect to the input header name.
-   * </p>
+   * <p>Note that unlike this method, {@link #getFirstHeaderValue(String)} and {@link
+   * #getHeaderValues(String)} are not case sensitive with respect to the input header name.
    *
    * @since 1.5
    */
@@ -119,7 +112,7 @@ public class MockLowLevelHttpRequest extends LowLevelHttpRequest {
    * @since 1.13
    */
   public String getFirstHeaderValue(String name) {
-    List<String> values = headersMap.get(name.toLowerCase());
+    List<String> values = headersMap.get(name.toLowerCase(Locale.US));
     return values == null ? null : values.get(0);
   }
 
@@ -130,7 +123,7 @@ public class MockLowLevelHttpRequest extends LowLevelHttpRequest {
    * @since 1.13
    */
   public List<String> getHeaderValues(String name) {
-    List<String> values = headersMap.get(name.toLowerCase());
+    List<String> values = headersMap.get(name.toLowerCase(Locale.US));
     return values == null ? Collections.<String>emptyList() : Collections.unmodifiableList(values);
   }
 
@@ -147,9 +140,7 @@ public class MockLowLevelHttpRequest extends LowLevelHttpRequest {
   /**
    * Returns HTTP content as a string, taking care of any encodings of the content if necessary.
    *
-   * <p>
-   * Returns an empty string if there is no HTTP content.
-   * </p>
+   * <p>Returns an empty string if there is no HTTP content.
    *
    * @since 1.12
    */
@@ -171,8 +162,10 @@ public class MockLowLevelHttpRequest extends LowLevelHttpRequest {
     // determine charset parameter from content type
     String contentType = getContentType();
     HttpMediaType mediaType = contentType != null ? new HttpMediaType(contentType) : null;
-    Charset charset = mediaType == null || mediaType.getCharsetParameter() == null
-        ? Charsets.ISO_8859_1 : mediaType.getCharsetParameter();
+    Charset charset =
+        mediaType == null || mediaType.getCharsetParameter() == null
+            ? Charsets.ISO_8859_1
+            : mediaType.getCharsetParameter();
     return out.toString(charset.name());
   }
 
@@ -188,9 +181,7 @@ public class MockLowLevelHttpRequest extends LowLevelHttpRequest {
   /**
    * Sets the HTTP response to return from {@link #execute()}.
    *
-   * <p>
-   * By default this is a new instance of {@link MockLowLevelHttpResponse}.
-   * </p>
+   * <p>By default this is a new instance of {@link MockLowLevelHttpResponse}.
    */
   public MockLowLevelHttpRequest setResponse(MockLowLevelHttpResponse response) {
     this.response = response;

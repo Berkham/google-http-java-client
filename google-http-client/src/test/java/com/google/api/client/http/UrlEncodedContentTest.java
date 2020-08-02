@@ -17,15 +17,13 @@ package com.google.api.client.http;
 import com.google.api.client.testing.http.HttpTesting;
 import com.google.api.client.testing.http.MockHttpTransport;
 import com.google.api.client.util.ArrayMap;
-
-import junit.framework.TestCase;
-
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import junit.framework.TestCase;
 
 /**
  * Tests {@link UrlEncodedContent}.
@@ -37,11 +35,9 @@ public class UrlEncodedContentTest extends TestCase {
   public void testWriteTo() throws IOException {
     subtestWriteTo("a=x", ArrayMap.of("a", "x"));
     subtestWriteTo("noval", ArrayMap.of("noval", ""));
-    subtestWriteTo(
-        "multi=a&multi=b&multi=c", ArrayMap.of("multi", Arrays.asList("a", "b", "c")));
-    subtestWriteTo(
-        "multi=a&multi=b&multi=c", ArrayMap.of("multi", new String[] {"a", "b", "c"}));
-    // https://code.google.com/p/google-http-java-client/issues/detail?id=202
+    subtestWriteTo("multi=a&multi=b&multi=c", ArrayMap.of("multi", Arrays.asList("a", "b", "c")));
+    subtestWriteTo("multi=a&multi=b&multi=c", ArrayMap.of("multi", new String[] {"a", "b", "c"}));
+    // https://github.com/googleapis/google-http-java-client/issues/202
     final Map<String, String> params = new LinkedHashMap<String, String>();
     params.put("username", "un");
     params.put("password", "password123;{}");
@@ -56,8 +52,10 @@ public class UrlEncodedContentTest extends TestCase {
   }
 
   public void testGetContent() throws Exception {
-    HttpRequest request = new MockHttpTransport().createRequestFactory()
-        .buildGetRequest(HttpTesting.SIMPLE_GENERIC_URL);
+    HttpRequest request =
+        new MockHttpTransport()
+            .createRequestFactory()
+            .buildGetRequest(HttpTesting.SIMPLE_GENERIC_URL);
     UrlEncodedContent content = UrlEncodedContent.getContent(request);
     assertNotNull(content);
     assertTrue(content.getData() instanceof Map);

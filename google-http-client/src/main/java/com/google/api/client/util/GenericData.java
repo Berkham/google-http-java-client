@@ -18,28 +18,24 @@ import java.util.AbstractMap;
 import java.util.AbstractSet;
 import java.util.EnumSet;
 import java.util.Iterator;
+import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
 
 /**
  * Generic data that stores all unknown data key name/value pairs.
  *
- * <p>
- * Subclasses can declare fields for known data keys using the {@link Key} annotation. Each field
+ * <p>Subclasses can declare fields for known data keys using the {@link Key} annotation. Each field
  * can be of any visibility (private, package private, protected, or public) and must not be static.
  * {@code null} unknown data key names are not allowed, but {@code null} data values are allowed.
- * </p>
  *
- * <p>
- * Iteration order of the data keys is based on the sorted (ascending) key names of the declared
+ * <p>Iteration order of the data keys is based on the sorted (ascending) key names of the declared
  * fields, followed by the iteration order of all of the unknown data key name/value pairs.
- * </p>
  *
- * <p>
- * Implementation is not thread-safe. For a thread-safe choice instead use an implementation of
+ * <p>Implementation is not thread-safe. For a thread-safe choice instead use an implementation of
  * {@link ConcurrentMap}.
- * </p>
  *
  * @since 1.0
  * @author Yaniv Inbar
@@ -54,15 +50,14 @@ public class GenericData extends AbstractMap<String, Object> implements Cloneabl
   /** Class information. */
   final ClassInfo classInfo;
 
-  /**
-   * Constructs with case-insensitive keys.
-   */
+  /** Constructs with case-insensitive keys. */
   public GenericData() {
     this(EnumSet.noneOf(Flags.class));
   }
 
   /**
    * Flags that impact behavior of generic data.
+   *
    * @since 1.10
    */
   public enum Flags {
@@ -90,7 +85,7 @@ public class GenericData extends AbstractMap<String, Object> implements Cloneabl
       return fieldInfo.getValue(this);
     }
     if (classInfo.getIgnoreCase()) {
-      fieldName = fieldName.toLowerCase();
+      fieldName = fieldName.toLowerCase(Locale.US);
     }
     return unknownFields.get(fieldName);
   }
@@ -104,20 +99,18 @@ public class GenericData extends AbstractMap<String, Object> implements Cloneabl
       return oldValue;
     }
     if (classInfo.getIgnoreCase()) {
-      fieldName = fieldName.toLowerCase();
+      fieldName = fieldName.toLowerCase(Locale.US);
     }
     return unknownFields.put(fieldName, value);
   }
 
   /**
    * Sets the given field value (may be {@code null}) for the given field name. Any existing value
-   * for the field will be overwritten. It may be more slightly more efficient than
-   * {@link #put(String, Object)} because it avoids accessing the field's original value.
+   * for the field will be overwritten. It may be more slightly more efficient than {@link
+   * #put(String, Object)} because it avoids accessing the field's original value.
    *
-   * <p>
-   * Overriding is only supported for the purpose of calling the super implementation and changing
-   * the return type, but nothing else.
-   * </p>
+   * <p>Overriding is only supported for the purpose of calling the super implementation and
+   * changing the return type, but nothing else.
    */
   public GenericData set(String fieldName, Object value) {
     FieldInfo fieldInfo = classInfo.getFieldInfo(fieldName);
@@ -125,7 +118,7 @@ public class GenericData extends AbstractMap<String, Object> implements Cloneabl
       fieldInfo.setValue(this, value);
     } else {
       if (classInfo.getIgnoreCase()) {
-        fieldName = fieldName.toLowerCase();
+        fieldName = fieldName.toLowerCase(Locale.US);
       }
       unknownFields.put(fieldName, value);
     }
@@ -150,7 +143,7 @@ public class GenericData extends AbstractMap<String, Object> implements Cloneabl
       throw new UnsupportedOperationException();
     }
     if (classInfo.getIgnoreCase()) {
-      fieldName = fieldName.toLowerCase();
+      fieldName = fieldName.toLowerCase(Locale.US);
     }
     return unknownFields.remove(fieldName);
   }
@@ -193,6 +186,28 @@ public class GenericData extends AbstractMap<String, Object> implements Cloneabl
    */
   public final void setUnknownKeys(Map<String, Object> unknownFields) {
     this.unknownFields = unknownFields;
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    if (o == this) {
+      return true;
+    }
+    if (o == null || !(o instanceof GenericData)) {
+      return false;
+    }
+    GenericData that = (GenericData) o;
+    return super.equals(that) && Objects.equals(this.classInfo, that.classInfo);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(super.hashCode(), classInfo);
+  }
+
+  @Override
+  public String toString() {
+    return "GenericData{" + "classInfo=" + classInfo.names + ", " + super.toString() + "}";
   }
 
   /**

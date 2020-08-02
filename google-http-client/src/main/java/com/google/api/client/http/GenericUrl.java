@@ -20,7 +20,6 @@ import com.google.api.client.util.Preconditions;
 import com.google.api.client.util.escape.CharEscapers;
 import com.google.api.client.util.escape.Escaper;
 import com.google.api.client.util.escape.PercentEscaper;
-
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -30,6 +29,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
@@ -38,28 +38,21 @@ import java.util.Set;
  * the specification <a href="http://tools.ietf.org/html/rfc3986">RFC 3986: Uniform Resource
  * Identifier (URI)</a>.
  *
- * <p>
- * The query parameters are specified with the data key name as the parameter name, and the data
+ * <p>The query parameters are specified with the data key name as the parameter name, and the data
  * value as the parameter value. Subclasses can declare fields for known query parameters using the
  * {@link Key} annotation. {@code null} parameter names are not allowed, but {@code null} query
  * values are allowed.
- * </p>
  *
- * <p>
- * Query parameter values are parsed using {@link UrlEncodedParser#parse(String, Object)}.
- * </p>
+ * <p>Query parameter values are parsed using {@link UrlEncodedParser#parse(String, Object)}.
  *
- * <p>
- * Implementation is not thread-safe.
- * </p>
+ * <p>Implementation is not thread-safe.
  *
  * @since 1.0
  * @author Yaniv Inbar
  */
 public class GenericUrl extends GenericData {
 
-  private static final Escaper URI_FRAGMENT_ESCAPER =
-      new PercentEscaper("=&-_.!~*'()@:$,;/?:", false);
+  private static final Escaper URI_FRAGMENT_ESCAPER = new PercentEscaper("=&-_.!~*'()@:$,;/?:");
 
   /** Scheme (lowercase), for example {@code "https"}. */
   private String scheme;
@@ -76,99 +69,152 @@ public class GenericUrl extends GenericData {
   /**
    * Decoded path component by parts with each part separated by a {@code '/'} or {@code null} for
    * none, for example {@code "/m8/feeds/contacts/default/full"} is represented by {@code "", "m8",
-   *"feeds", "contacts", "default", "full"}.
-   * <p>
-   * Use {@link #appendRawPath(String)} to append to the path, which ensures that no extra slash is
-   * added.
-   * </p>
+   * "feeds", "contacts", "default", "full"}.
+   *
+   * <p>Use {@link #appendRawPath(String)} to append to the path, which ensures that no extra slash
+   * is added.
    */
   private List<String> pathParts;
 
   /** Fragment component or {@code null} for none. */
   private String fragment;
 
-  public GenericUrl() {
+  /**
+   * If true, the URL string originally given is used as is (without encoding, decoding and
+   * escaping) whenever referenced; otherwise, part of the URL string may be encoded or decoded as
+   * deemed appropriate or necessary.
+   */
+  private boolean verbatim;
+
+  public GenericUrl() {}
+
+  /**
+   * Constructs a GenericUrl from a URL encoded string.
+   *
+   * <p>Any known query parameters with pre-defined fields as data keys will be parsed based on
+   * their data type. Any unrecognized query parameter will always be parsed as a string.
+   *
+   * <p>Any {@link MalformedURLException} is wrapped in an {@link IllegalArgumentException}.
+   *
+   * <p>Upgrade warning: starting in version 1.18 this parses the encodedUrl using new
+   * URL(encodedUrl). In previous versions it used new URI(encodedUrl). In particular, this means
+   * that only a limited set of schemes are allowed such as "http" and "https", but that parsing is
+   * compliant with, at least, RFC 3986.
+   *
+   * @param encodedUrl encoded URL, including any existing query parameters that should be parsed
+   * @throws IllegalArgumentException if the URL has a syntax error
+   */
+  public GenericUrl(String encodedUrl) {
+    this(encodedUrl, false);
   }
 
   /**
-   * Constructs from an encoded URL.
+   * Constructs a GenericUrl from a string.
    *
-   * <p>
-   * Any known query parameters with pre-defined fields as data keys will be parsed based on their
-   * data type. Any unrecognized query parameter will always be parsed as a string.
-   * </p>
+   * <p>Any known query parameters with pre-defined fields as data keys will be parsed based on
+   * their data type. Any unrecognized query parameter will always be parsed as a string.
    *
-   * <p>
-   * Any {@link MalformedURLException} is wrapped in an {@link IllegalArgumentException}.
-   * </p>
-   *
-   * <p>Upgrade warning: starting in version 1.18 this parses the encodedUrl using
-   * new URL(encodedUrl). In previous versions it used new URI(encodedUrl).
-   * In particular, this means that only a limited set of schemes are allowed such as "http" and
-   * "https", but that parsing is compliant with, at least, RFC 3986.</p>
+   * <p>Any {@link MalformedURLException} is wrapped in an {@link IllegalArgumentException}.
    *
    * @param encodedUrl encoded URL, including any existing query parameters that should be parsed
+   * @param verbatim flag, to specify if URL should be used as is (without encoding, decoding and
+   *     escaping)
    * @throws IllegalArgumentException if URL has a syntax error
    */
-  public GenericUrl(String encodedUrl) {
-    this(parseURL(encodedUrl));
+  public GenericUrl(String encodedUrl, boolean verbatim) {
+    this(parseURL(encodedUrl), verbatim);
   }
 
   /**
    * Constructs from a URI.
    *
    * @param uri URI
-   *
    * @since 1.14
    */
   public GenericUrl(URI uri) {
-    this(uri.getScheme(),
+    this(uri, false);
+  }
+
+  /**
+   * Constructs from a URI.
+   *
+   * @param uri URI
+   * @param verbatim flag, to specify if URL should be used as is (without encoding, decoding and
+   *     escaping)
+   */
+  public GenericUrl(URI uri, boolean verbatim) {
+    this(
+        uri.getScheme(),
         uri.getHost(),
         uri.getPort(),
         uri.getRawPath(),
         uri.getRawFragment(),
         uri.getRawQuery(),
-        uri.getRawUserInfo());
+        uri.getRawUserInfo(),
+        verbatim);
   }
 
   /**
    * Constructs from a URL.
    *
    * @param url URL
-   *
    * @since 1.14
    */
   public GenericUrl(URL url) {
-    this(url.getProtocol(),
+    this(url, false);
+  }
+
+  /**
+   * Constructs from a URL.
+   *
+   * @param url URL
+   * @param verbatim flag, to specify if URL should be used as is (without encoding, decoding and
+   *     escaping)
+   * @since 1.14
+   */
+  public GenericUrl(URL url, boolean verbatim) {
+    this(
+        url.getProtocol(),
         url.getHost(),
         url.getPort(),
         url.getPath(),
         url.getRef(),
         url.getQuery(),
-        url.getUserInfo());
+        url.getUserInfo(),
+        verbatim);
   }
 
-  private GenericUrl(String scheme,
+  private GenericUrl(
+      String scheme,
       String host,
       int port,
       String path,
       String fragment,
       String query,
-      String userInfo) {
-    this.scheme = scheme.toLowerCase();
+      String userInfo,
+      boolean verbatim) {
+    this.scheme = scheme.toLowerCase(Locale.US);
     this.host = host;
     this.port = port;
-    this.pathParts = toPathParts(path);
-    this.fragment = fragment != null ? CharEscapers.decodeUri(fragment) : null;
-    if (query != null) {
-      UrlEncodedParser.parse(query, this);
+    this.pathParts = toPathParts(path, verbatim);
+    this.verbatim = verbatim;
+    if (verbatim) {
+      this.fragment = fragment;
+      if (query != null) {
+        UrlEncodedParser.parse(query, this, false);
+      }
+      this.userInfo = userInfo;
+    } else {
+      this.fragment = fragment != null ? CharEscapers.decodeUri(fragment) : null;
+      if (query != null) {
+        UrlEncodedParser.parse(query, this);
+      }
+      this.userInfo = userInfo != null ? CharEscapers.decodeUri(userInfo) : null;
     }
-    this.userInfo = userInfo != null ? CharEscapers.decodeUri(userInfo) : null;
   }
 
   @Override
   public int hashCode() {
-    // TODO(yanivi): optimize?
     return build().hashCode();
   }
 
@@ -181,8 +227,7 @@ public class GenericUrl extends GenericData {
       return false;
     }
     GenericUrl other = (GenericUrl) obj;
-    // TODO(yanivi): optimize?
-    return build().equals(other.toString());
+    return build().equals(other.build());
   }
 
   @Override
@@ -278,8 +323,8 @@ public class GenericUrl extends GenericData {
   }
 
   /**
-   * Returns the decoded path component by parts with each part separated by a {@code '/'} or
-   * {@code null} for none.
+   * Returns the decoded path component by parts with each part separated by a {@code '/'} or {@code
+   * null} for none.
    *
    * @since 1.5
    */
@@ -288,18 +333,14 @@ public class GenericUrl extends GenericData {
   }
 
   /**
-   * Sets the decoded path component by parts with each part separated by a {@code '/'} or
-   * {@code null} for none.
+   * Sets the decoded path component by parts with each part separated by a {@code '/'} or {@code
+   * null} for none.
    *
-   * <p>
-   * For example {@code "/m8/feeds/contacts/default/full"} is represented by {@code "", "m8",
-   *"feeds", "contacts", "default", "full"}.
-   * </p>
+   * <p>For example {@code "/m8/feeds/contacts/default/full"} is represented by {@code "", "m8",
+   * "feeds", "contacts", "default", "full"}.
    *
-   * <p>
-   * Use {@link #appendRawPath(String)} to append to the path, which ensures that no extra slash is
-   * added.
-   * </p>
+   * <p>Use {@link #appendRawPath(String)} to append to the path, which ensures that no extra slash
+   * is added.
    *
    * @since 1.5
    */
@@ -326,8 +367,8 @@ public class GenericUrl extends GenericData {
   }
 
   /**
-   * Constructs the string representation of the URL, including the path specified by
-   * {@link #pathParts} and the query parameters specified by this generic URL.
+   * Constructs the string representation of the URL, including the path specified by {@link
+   * #pathParts} and the query parameters specified by this generic URL.
    */
   public final String build() {
     return buildAuthority() + buildRelativeUrl();
@@ -336,10 +377,8 @@ public class GenericUrl extends GenericData {
   /**
    * Constructs the portion of the URL containing the scheme, host and port.
    *
-   * <p>
-   * For the URL {@code "http://example.com/something?action=add"} this method would return
+   * <p>For the URL {@code "http://example.com/something?action=add"} this method would return
    * {@code "http://example.com"}.
-   * </p>
    *
    * @return scheme://[user-info@]host[:port]
    * @since 1.9
@@ -350,7 +389,7 @@ public class GenericUrl extends GenericData {
     buf.append(Preconditions.checkNotNull(scheme));
     buf.append("://");
     if (userInfo != null) {
-      buf.append(CharEscapers.escapeUriUserInfo(userInfo)).append('@');
+      buf.append(verbatim ? userInfo : CharEscapers.escapeUriUserInfo(userInfo)).append('@');
     }
     buf.append(Preconditions.checkNotNull(host));
     int port = this.port;
@@ -363,10 +402,8 @@ public class GenericUrl extends GenericData {
   /**
    * Constructs the portion of the URL beginning at the rooted path.
    *
-   * <p>
-   * For the URL {@code "http://example.com/something?action=add"} this method would return
+   * <p>For the URL {@code "http://example.com/something?action=add"} this method would return
    * {@code "/something?action=add"}.
-   * </p>
    *
    * @return path with with leading '/' if the path is non-empty, query parameters and fragment
    * @since 1.9
@@ -376,12 +413,12 @@ public class GenericUrl extends GenericData {
     if (pathParts != null) {
       appendRawPathFromParts(buf);
     }
-    addQueryParams(entrySet(), buf);
+    addQueryParams(entrySet(), buf, verbatim);
 
     // URL fragment
     String fragment = this.fragment;
     if (fragment != null) {
-      buf.append('#').append(URI_FRAGMENT_ESCAPER.escape(fragment));
+      buf.append('#').append(verbatim ? fragment : URI_FRAGMENT_ESCAPER.escape(fragment));
     }
     return buf.toString();
   }
@@ -389,12 +426,9 @@ public class GenericUrl extends GenericData {
   /**
    * Constructs the URI based on the string representation of the URL from {@link #build()}.
    *
-   * <p>
-   * Any {@link URISyntaxException} is wrapped in an {@link IllegalArgumentException}.
-   * </p>
+   * <p>Any {@link URISyntaxException} is wrapped in an {@link IllegalArgumentException}.
    *
    * @return new URI instance
-   *
    * @since 1.14
    */
   public final URI toURI() {
@@ -404,12 +438,9 @@ public class GenericUrl extends GenericData {
   /**
    * Constructs the URL based on the string representation of the URL from {@link #build()}.
    *
-   * <p>
-   * Any {@link MalformedURLException} is wrapped in an {@link IllegalArgumentException}.
-   * </p>
+   * <p>Any {@link MalformedURLException} is wrapped in an {@link IllegalArgumentException}.
    *
    * @return new URL instance
-   *
    * @since 1.14
    */
   public final URL toURL() {
@@ -420,12 +451,9 @@ public class GenericUrl extends GenericData {
    * Constructs the URL based on {@link URL#URL(URL, String)} with this URL representation from
    * {@link #toURL()} and a relative url.
    *
-   * <p>
-   * Any {@link MalformedURLException} is wrapped in an {@link IllegalArgumentException}.
-   * </p>
+   * <p>Any {@link MalformedURLException} is wrapped in an {@link IllegalArgumentException}.
    *
    * @return new URL instance
-   *
    * @since 1.14
    */
   public final URL toURL(String relativeUrl) {
@@ -476,8 +504,8 @@ public class GenericUrl extends GenericData {
   /**
    * Returns the raw encoded path computed from the {@link #pathParts}.
    *
-   * @return raw encoded path computed from the {@link #pathParts} or {@code null} if
-   *         {@link #pathParts} is {@code null}
+   * @return raw encoded path computed from the {@link #pathParts} or {@code null} if {@link
+   *     #pathParts} is {@code null}
    */
   public String getRawPath() {
     List<String> pathParts = this.pathParts;
@@ -495,23 +523,22 @@ public class GenericUrl extends GenericData {
    * @param encodedPath raw encoded path or {@code null} to set {@link #pathParts} to {@code null}
    */
   public void setRawPath(String encodedPath) {
-    pathParts = toPathParts(encodedPath);
+    pathParts = toPathParts(encodedPath, verbatim);
   }
 
   /**
    * Appends the given raw encoded path to the current {@link #pathParts}, setting field only if it
    * is {@code null} or empty.
-   * <p>
-   * The last part of the {@link #pathParts} is merged with the first part of the path parts
+   *
+   * <p>The last part of the {@link #pathParts} is merged with the first part of the path parts
    * computed from the given encoded path. Thus, if the current raw encoded path is {@code "a"}, and
    * the given encoded path is {@code "b"}, then the resulting raw encoded path is {@code "ab"}.
-   * </p>
    *
    * @param encodedPath raw encoded path or {@code null} to ignore
    */
   public void appendRawPath(String encodedPath) {
     if (encodedPath != null && encodedPath.length() != 0) {
-      List<String> appendedPathParts = toPathParts(encodedPath);
+      List<String> appendedPathParts = toPathParts(encodedPath, verbatim);
       if (pathParts == null || pathParts.isEmpty()) {
         this.pathParts = appendedPathParts;
       } else {
@@ -521,17 +548,31 @@ public class GenericUrl extends GenericData {
       }
     }
   }
-
   /**
    * Returns the decoded path parts for the given encoded path.
    *
-   * @param encodedPath slash-prefixed encoded path, for example
-   *        {@code "/m8/feeds/contacts/default/full"}
+   * @param encodedPath slash-prefixed encoded path, for example {@code
+   *     "/m8/feeds/contacts/default/full"}
    * @return decoded path parts, with each part assumed to be preceded by a {@code '/'}, for example
-   *         {@code "", "m8", "feeds", "contacts", "default", "full"}, or {@code null} for
-   *         {@code null} or {@code ""} input
+   *     {@code "", "m8", "feeds", "contacts", "default", "full"}, or {@code null} for {@code null}
+   *     or {@code ""} input
    */
   public static List<String> toPathParts(String encodedPath) {
+    return toPathParts(encodedPath, false);
+  }
+
+  /**
+   * Returns the path parts (decoded if not {@code verbatim}).
+   *
+   * @param encodedPath slash-prefixed encoded path, for example {@code
+   *     "/m8/feeds/contacts/default/full"}
+   * @param verbatim flag, to specify if URL should be used as is (without encoding, decoding and
+   *     escaping)
+   * @return path parts (decoded if not {@code verbatim}), with each part assumed to be preceded by
+   *     a {@code '/'}, for example {@code "", "m8", "feeds", "contacts", "default", "full"}, or
+   *     {@code null} for {@code null} or {@code ""} input
+   */
+  public static List<String> toPathParts(String encodedPath, boolean verbatim) {
     if (encodedPath == null || encodedPath.length() == 0) {
       return null;
     }
@@ -547,7 +588,7 @@ public class GenericUrl extends GenericData {
       } else {
         sub = encodedPath.substring(cur);
       }
-      result.add(CharEscapers.decodeUri(sub));
+      result.add(verbatim ? sub : CharEscapers.decodeUriPath(sub));
       cur = slash + 1;
     }
     return result;
@@ -561,34 +602,37 @@ public class GenericUrl extends GenericData {
         buf.append('/');
       }
       if (pathPart.length() != 0) {
-        buf.append(CharEscapers.escapeUriPath(pathPart));
+        buf.append(verbatim ? pathPart : CharEscapers.escapeUriPath(pathPart));
       }
     }
   }
 
-  /**
-   * Adds query parameters from the provided entrySet into the buffer.
-   */
-  static void addQueryParams(Set<Entry<String, Object>> entrySet, StringBuilder buf) {
+  /** Adds query parameters from the provided entrySet into the buffer. */
+  static void addQueryParams(
+      Set<Entry<String, Object>> entrySet, StringBuilder buf, boolean verbatim) {
     // (similar to UrlEncodedContent)
     boolean first = true;
     for (Map.Entry<String, Object> nameValueEntry : entrySet) {
       Object value = nameValueEntry.getValue();
       if (value != null) {
-        String name = CharEscapers.escapeUriQuery(nameValueEntry.getKey());
+        String name =
+            verbatim
+                ? nameValueEntry.getKey()
+                : CharEscapers.escapeUriQuery(nameValueEntry.getKey());
         if (value instanceof Collection<?>) {
           Collection<?> collectionValue = (Collection<?>) value;
           for (Object repeatedValue : collectionValue) {
-            first = appendParam(first, buf, name, repeatedValue);
+            first = appendParam(first, buf, name, repeatedValue, verbatim);
           }
         } else {
-          first = appendParam(first, buf, name, value);
+          first = appendParam(first, buf, name, value, verbatim);
         }
       }
     }
   }
 
-  private static boolean appendParam(boolean first, StringBuilder buf, String name, Object value) {
+  private static boolean appendParam(
+      boolean first, StringBuilder buf, String name, Object value, boolean verbatim) {
     if (first) {
       first = false;
       buf.append('?');
@@ -596,7 +640,8 @@ public class GenericUrl extends GenericData {
       buf.append('&');
     }
     buf.append(name);
-    String stringValue = CharEscapers.escapeUriQuery(value.toString());
+    String stringValue =
+        verbatim ? value.toString() : CharEscapers.escapeUriQuery(value.toString());
     if (stringValue.length() != 0) {
       buf.append('=').append(stringValue);
     }
@@ -606,9 +651,7 @@ public class GenericUrl extends GenericData {
   /**
    * Returns the URI for the given encoded URL.
    *
-   * <p>
-   * Any {@link URISyntaxException} is wrapped in an {@link IllegalArgumentException}.
-   * </p>
+   * <p>Any {@link URISyntaxException} is wrapped in an {@link IllegalArgumentException}.
    *
    * @param encodedUrl encoded URL
    * @return URI
@@ -624,9 +667,7 @@ public class GenericUrl extends GenericData {
   /**
    * Returns the URI for the given encoded URL.
    *
-   * <p>
-   * Any {@link MalformedURLException} is wrapped in an {@link IllegalArgumentException}.
-   * </p>
+   * <p>Any {@link MalformedURLException} is wrapped in an {@link IllegalArgumentException}.
    *
    * @param encodedUrl encoded URL
    * @return URL

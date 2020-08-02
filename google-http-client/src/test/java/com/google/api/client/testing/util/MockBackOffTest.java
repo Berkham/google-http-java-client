@@ -15,10 +15,8 @@
 package com.google.api.client.testing.util;
 
 import com.google.api.client.util.BackOff;
-
-import junit.framework.TestCase;
-
 import java.io.IOException;
+import junit.framework.TestCase;
 
 /**
  * Tests {@link MockBackOff}.
@@ -39,5 +37,4 @@ public class MockBackOffTest extends TestCase {
       assertEquals(expectedValue, backOffPolicy.nextBackOffMillis());
     }
   }
-
 }

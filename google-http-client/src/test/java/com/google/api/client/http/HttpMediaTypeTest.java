@@ -15,7 +15,7 @@
 package com.google.api.client.http;
 
 import com.google.common.base.Charsets;
-
+import com.google.common.testing.EqualsTester;
 import junit.framework.TestCase;
 
 /**
@@ -76,7 +76,8 @@ public class HttpMediaTypeTest extends TestCase {
     try {
       new HttpMediaType(null);
       fail("Method did not NullPointerException");
-    } catch (NullPointerException expected) {}
+    } catch (NullPointerException expected) {
+    }
   }
 
   public void testFromString_multipartSpec() {
@@ -109,7 +110,8 @@ public class HttpMediaTypeTest extends TestCase {
     try {
       new HttpMediaType("text", "plain").setType("foo/bar");
       fail("Method did not throw IllegalArgumentException");
-    } catch (IllegalArgumentException expected) {}
+    } catch (IllegalArgumentException expected) {
+    }
   }
 
   public void testSetSubType() {
@@ -120,7 +122,8 @@ public class HttpMediaTypeTest extends TestCase {
     try {
       new HttpMediaType("text", "plain").setSubType("foo/bar");
       fail("Method did not throw IllegalArgumentException");
-    } catch (IllegalArgumentException expected) {}
+    } catch (IllegalArgumentException expected) {
+    }
   }
 
   public void testSetParameter_casing() {
@@ -169,10 +172,14 @@ public class HttpMediaTypeTest extends TestCase {
   }
 
   public void testEqualsIgnoreParameters() {
-    assertEquals(true, new HttpMediaType("foo/bar").equalsIgnoreParameters(new HttpMediaType("Foo/bar")));
-    assertEquals(true, new HttpMediaType("foo/bar").equalsIgnoreParameters(
-        new HttpMediaType("foo/bar; charset=utf-8")));
-    assertEquals(false, new HttpMediaType("foo/bar").equalsIgnoreParameters(new HttpMediaType("bar/foo")));
+    assertEquals(
+        true, new HttpMediaType("foo/bar").equalsIgnoreParameters(new HttpMediaType("Foo/bar")));
+    assertEquals(
+        true,
+        new HttpMediaType("foo/bar")
+            .equalsIgnoreParameters(new HttpMediaType("foo/bar; charset=utf-8")));
+    assertEquals(
+        false, new HttpMediaType("foo/bar").equalsIgnoreParameters(new HttpMediaType("bar/foo")));
     assertEquals(false, new HttpMediaType("foo/bar").equalsIgnoreParameters(null));
   }
 
@@ -184,10 +191,10 @@ public class HttpMediaTypeTest extends TestCase {
   }
 
   public void testEquals() {
-    assertEquals(true, new HttpMediaType("foo/bar").equals(new HttpMediaType("foo/bar")));
-    assertEquals(true, new HttpMediaType("foo/bar; a=c").equals(new HttpMediaType("foo/bar; a=c")));
-    assertEquals(false, new HttpMediaType("foo/bar; bar=bar").equals(new HttpMediaType("foo/bar")));
-    assertEquals(false, new HttpMediaType("foo/bar").equals(null));
-    assertEquals(false, new HttpMediaType("foo/bar").equals(new Integer(5)));
+    new EqualsTester()
+        .addEqualityGroup(new HttpMediaType("foo/bar"), new HttpMediaType("foo/bar"))
+        .addEqualityGroup(new HttpMediaType("foo/bar; a=c"), new HttpMediaType("foo/bar; a=c"))
+        .addEqualityGroup(new HttpMediaType("foo/bar; bar=bar"))
+        .testEquals();
   }
 }

@@ -32,7 +32,6 @@ import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
 import java.util.List;
-
 import javax.net.ssl.X509TrustManager;
 
 /**
@@ -61,19 +60,16 @@ public final class SecurityUtils {
   /**
    * Loads a key store from a stream.
    *
-   *
-   * <p>
-   * Example usage:
-   * </p>
+   * <p>Example usage:
    *
    * <pre>
-    KeyStore keyStore = SecurityUtils.getJavaKeyStore();
-    SecurityUtils.loadKeyStore(keyStore, new FileInputStream("certs.jks"), "password");
+   * KeyStore keyStore = SecurityUtils.getJavaKeyStore();
+   * SecurityUtils.loadKeyStore(keyStore, new FileInputStream("certs.jks"), "password");
    * </pre>
    *
    * @param keyStore key store
    * @param keyStream input stream to the key store stream (closed at the end of this method in a
-   *        finally block)
+   *     finally block)
    * @param storePass password protecting the key store file
    */
   public static void loadKeyStore(KeyStore keyStore, InputStream keyStream, String storePass)
@@ -103,7 +99,7 @@ public final class SecurityUtils {
    *
    * @param keyStore key store
    * @param keyStream input stream to the key store (closed at the end of this method in a finally
-   *        block)
+   *     block)
    * @param storePass password protecting the key store file
    * @param alias alias under which the key is stored
    * @param keyPass password protecting the key
@@ -129,6 +125,11 @@ public final class SecurityUtils {
   /** Returns the SHA-256 with RSA signature algorithm. */
   public static Signature getSha256WithRsaSignatureAlgorithm() throws NoSuchAlgorithmException {
     return Signature.getInstance("SHA256withRSA");
+  }
+
+  /** Returns the SHA-256 with ECDSA signature algorithm */
+  public static Signature getEs256SignatureAlgorithm() throws NoSuchAlgorithmException {
+    return Signature.getInstance("SHA256withECDSA");
   }
 
   /**
@@ -161,7 +162,12 @@ public final class SecurityUtils {
       throws InvalidKeyException, SignatureException {
     signatureAlgorithm.initVerify(publicKey);
     signatureAlgorithm.update(contentBytes);
-    return signatureAlgorithm.verify(signatureBytes);
+    // SignatureException may be thrown if we are trying the wrong key.
+    try {
+      return signatureAlgorithm.verify(signatureBytes);
+    } catch (SignatureException e) {
+      return false;
+    }
   }
 
   /**
@@ -170,14 +176,18 @@ public final class SecurityUtils {
    * @param signatureAlgorithm signature algorithm
    * @param trustManager trust manager used to verify the certificate chain
    * @param certChainBase64 Certificate chain used for verification. The certificates must be base64
-   *        encoded DER, the leaf certificate must be the first element.
+   *     encoded DER, the leaf certificate must be the first element.
    * @param signatureBytes signature bytes
    * @param contentBytes content bytes
    * @return The signature certificate if the signature could be verified, null otherwise.
    * @since 1.19.1.
    */
-  public static X509Certificate verify(Signature signatureAlgorithm, X509TrustManager trustManager,
-      List<String> certChainBase64, byte[] signatureBytes, byte[] contentBytes)
+  public static X509Certificate verify(
+      Signature signatureAlgorithm,
+      X509TrustManager trustManager,
+      List<String> certChainBase64,
+      byte[] signatureBytes,
+      byte[] contentBytes)
       throws InvalidKeyException, SignatureException {
     CertificateFactory certificateFactory;
     try {
@@ -218,28 +228,24 @@ public final class SecurityUtils {
   }
 
   /**
-   * Loads a key store with certificates generated from the specified stream using
-   * {@link CertificateFactory#generateCertificates(InputStream)}.
+   * Loads a key store with certificates generated from the specified stream using {@link
+   * CertificateFactory#generateCertificates(InputStream)}.
    *
-   * <p>
-   * For each certificate, {@link KeyStore#setCertificateEntry(String, Certificate)} is called with
-   * an alias that is the string form of incrementing non-negative integers starting with 0 (0, 1,
-   * 2, 3, ...).
-   * </p>
+   * <p>For each certificate, {@link KeyStore#setCertificateEntry(String, Certificate)} is called
+   * with an alias that is the string form of incrementing non-negative integers starting with 0 (0,
+   * 1, 2, 3, ...).
    *
-   * <p>
-   * Example usage:
-   * </p>
+   * <p>Example usage:
    *
    * <pre>
-    KeyStore keyStore = SecurityUtils.getJavaKeyStore();
-    SecurityUtils.loadKeyStoreFromCertificates(keyStore, SecurityUtils.getX509CertificateFactory(),
-        new FileInputStream(pemFile));
+   * KeyStore keyStore = SecurityUtils.getJavaKeyStore();
+   * SecurityUtils.loadKeyStoreFromCertificates(keyStore, SecurityUtils.getX509CertificateFactory(),
+   * new FileInputStream(pemFile));
    * </pre>
    *
    * @param keyStore key store (for example {@link #getJavaKeyStore()})
-   * @param certificateFactory certificate factory (for example
-   *        {@link #getX509CertificateFactory()})
+   * @param certificateFactory certificate factory (for example {@link
+   *     #getX509CertificateFactory()})
    * @param certificateStream certificate stream
    */
   public static void loadKeyStoreFromCertificates(
@@ -252,6 +258,5 @@ public final class SecurityUtils {
     }
   }
 
-  private SecurityUtils() {
-  }
+  private SecurityUtils() {}
 }

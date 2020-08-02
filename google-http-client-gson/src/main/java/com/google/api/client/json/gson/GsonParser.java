@@ -19,7 +19,6 @@ import com.google.api.client.json.JsonParser;
 import com.google.api.client.json.JsonToken;
 import com.google.api.client.util.Preconditions;
 import com.google.gson.stream.JsonReader;
-
 import java.io.EOFException;
 import java.io.IOException;
 import java.math.BigDecimal;
@@ -30,9 +29,7 @@ import java.util.List;
 /**
  * Low-level JSON serializer implementation based on GSON.
  *
- * <p>
- * Implementation is not thread-safe.
- * </p>
+ * <p>Implementation is not thread-safe.
  *
  * @author Yaniv Inbar
  */
@@ -74,26 +71,25 @@ class GsonParser extends JsonParser {
   @Override
   public byte getByteValue() {
     checkNumber();
-    return Byte.valueOf(currentText);
+    return Byte.parseByte(currentText);
   }
 
   @Override
   public short getShortValue() {
     checkNumber();
-    return Short.valueOf(currentText);
+    return Short.parseShort(currentText);
   }
-
 
   @Override
   public int getIntValue() {
     checkNumber();
-    return Integer.valueOf(currentText);
+    return Integer.parseInt(currentText);
   }
 
   @Override
   public float getFloatValue() {
     checkNumber();
-    return Float.valueOf(currentText);
+    return Float.parseFloat(currentText);
   }
 
   @Override
@@ -111,13 +107,13 @@ class GsonParser extends JsonParser {
   @Override
   public double getDoubleValue() {
     checkNumber();
-    return Double.valueOf(currentText);
+    return Double.parseDouble(currentText);
   }
 
   @Override
   public long getLongValue() {
     checkNumber();
-    return Long.valueOf(currentText);
+    return Long.parseLong(currentText);
   }
 
   private void checkNumber() {
@@ -147,7 +143,7 @@ class GsonParser extends JsonParser {
       }
     }
     // work around bug in GSON parser that it throws an EOFException for an empty document
-    // see http://code.google.com/p/google-gson/issues/detail?id=330
+    // see https://github.com/google/gson/issues/330
     com.google.gson.stream.JsonToken peek;
     try {
       peek = reader.peek();
@@ -195,8 +191,10 @@ class GsonParser extends JsonParser {
         break;
       case NUMBER:
         currentText = reader.nextString();
-        currentToken = currentText.indexOf('.') == -1
-            ? JsonToken.VALUE_NUMBER_INT : JsonToken.VALUE_NUMBER_FLOAT;
+        currentToken =
+            currentText.indexOf('.') == -1
+                ? JsonToken.VALUE_NUMBER_INT
+                : JsonToken.VALUE_NUMBER_FLOAT;
         break;
       case NAME:
         currentText = reader.nextName();
